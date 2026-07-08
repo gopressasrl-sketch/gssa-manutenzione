@@ -82,9 +82,9 @@ df = carica_dati()
 if menu == "🏠 Inserimento":
     st.title("🛠 Nuovo Intervento")
     
-    # GESTIONE FOTOCAMERA CON PULSANTE
     targa_ocr = None
     
+    # PULSANTE FOTOCAMERA
     if not st.session_state.mostra_camera:
         if st.button("📷 APRI FOTOCAMERA PER TARGA"):
             st.session_state.mostra_camera = True
@@ -96,14 +96,13 @@ if menu == "🏠 Inserimento":
             
         foto = st.camera_input("Scatta una foto alla targa")
         if foto:
-            with st.spinner("L'intelligenza artificiale sta leggendo la targa..."):
+            with st.spinner("Lettura targa..."):
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 res = model.generate_content(["Leggi la targa, scrivi solo quella.", PIL.Image.open(foto)])
                 targa_ocr = res.text.strip().upper().replace(" ", "")
-                st.session_state.mostra_camera = False # Chiude la camera dopo lo scatto
+                st.session_state.mostra_camera = False
                 st.success(f"Targa rilevata: {targa_ocr}")
 
-    # Selezione Targa
     targa_init = targa_ocr if targa_ocr in LISTA_TARGHE else LISTA_TARGHE[0]
     targa_sel = st.selectbox("Seleziona Veicolo", LISTA_TARGHE, index=LISTA_TARGHE.index(targa_init))
 
@@ -115,28 +114,32 @@ if menu == "🏠 Inserimento":
         
         st.divider()
         
-        # Calcolo proiezioni
+        # CALCOLO SCADENZE
         km_prossimo_t = km_att + KM_INTERVALLO_TAGLIANDO
         km_prossimo_g = km_att + KM_INTERVALLO_GOMME
         
         st.subheader("2. Scadenze Suggerite")
         c1, c2 = st.columns(2)
-        with c1: st.info(f"📅 **Prossimo Tagliando a:**\n{km_prossimo_t} km")
-        with c2: st.success(f"🛞 **Prossime Gomme a:**\n{km_prossime_g if 'KM_prossime Gomme' in df.columns else km_prossimo_g} km")
+        with c1: 
+            st.info(f"📅 **Prossimo Tagliando a:**\n{km_prossimo_t} km")
+        with c2: 
+            st.success(f"🛞 **Prossime Gomme a:**\n{km_prossimo_g} km")
 
         st.divider()
         
         st.subheader("3. Lavori eseguiti oggi")
-        eseguito_tagliando = st.checkbox("✅ Ho fatto il Tagliando oggi")
-        eseguite_gomme = st.checkbox("✅ Ho cambiato le Gomme oggi")
+        eseguito_tagliando = st.checkbox("✅ Tagliando eseguito")
+        eseguite_gomme = st.checkbox("✅ Cambio Gomme eseguito")
         
-        altro = st.text_area("📝 Note / Altri lavori (freni, lampadine, ecc...)", value=df.at[idx, 'Altro'] if 'Altro' in df.columns else "")
+        altro = st.text_area("📝 Note / Altri lavori", value=df.at[idx, 'Altro'] if 'Altro' in df.columns else "")
 
         if st.button("💾 SALVA E GENERA REPORT", use_container_width=True, type="primary"):
             df.at[idx, 'KM_Attuali'] = str(km_att)
+            
             if eseguito_tagliando:
                 df.at[idx, 'KM_Tagliando'] = str(km_att)
                 df.at[idx, 'KM_prossimo Tagliando'] = str(km_prossimo_t)
+            
             if eseguite_gomme:
                 df.at[idx, 'KM_Gomme'] = str(km_att)
                 df.at[idx, 'KM_prossime Gomme'] = str(km_prossimo_g)
@@ -144,7 +147,7 @@ if menu == "🏠 Inserimento":
             df.at[idx, 'Altro'] = altro
             df.at[idx, 'Data'] = datetime.now().strftime("%d/%m/%Y")
             df.at[idx, 'User'] = st.session_state.user
-            df.at[idx, 'Link_Report'] = "Generato"
+            df.at[idx, 'Link_Report'] = "PDF Generato"
             
             conn.update(worksheet="Manutenzione", data=df)
             st.success("✅ Database aggiornato!")
