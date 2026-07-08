@@ -7,8 +7,8 @@ import PIL.Image
 from fpdf import FPDF
 import io
 
-# --- CONFIGURAZIONE ---
-st.set_page_config(page_title="GSSA GESTIONE PRO", layout="wide")
+# --- CONFIGURAZIONE PAGINA ---
+st.set_page_config(page_title="GSSA GESTIONE PRO 2026", layout="wide")
 
 # --- STILE CSS PREMIUM ---
 st.markdown("""
@@ -17,12 +17,12 @@ st.markdown("""
     [data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {
         background-color: #1a1c24; border-radius: 15px; padding: 20px; border: 1px solid #2d2f39;
     }
-    .stButton>button { border-radius: 10px !important; font-weight: bold !important; }
+    .stButton>button { border-radius: 10px !important; font-weight: bold !important; height: 3em !important; }
     .scadenza-box { padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 10px; color: white; }
     .tagliando { background-color: #1e3a5f; border-left: 5px solid #3b82f6; }
     .gomme { background-color: #143e2f; border-left: 5px solid #10b981; }
-    .status-riparato { color: #00ff00; font-weight: bold; border: 1px solid #00ff00; padding: 2px 8px; border-radius: 5px; }
-    .status-aperto { color: #ff4b4b; font-weight: bold; border: 1px solid #ff4b4b; padding: 2px 8px; border-radius: 5px; }
+    .status-riparato { color: #00ff00; font-weight: bold; border: 1px solid #00ff00; padding: 2px 8px; border-radius: 5px; font-size: 12px; }
+    .status-aperto { color: #ff4b4b; font-weight: bold; border: 1px solid #ff4b4b; padding: 2px 8px; border-radius: 5px; font-size: 12px; }
     .alert-guasto { background-color: #442222; border: 1px solid #ff4b4b; padding: 15px; border-radius: 10px; color: #ffbcbc; margin-bottom: 15px; }
     </style>
     """, unsafe_allow_html=True)
@@ -62,14 +62,14 @@ def genera_pdf_storico(row):
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 15, "GSSA LOGISTICS - REPORT INTERVENTO", ln=True, align='C')
     pdf.ln(5); pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, f"Data: {row['Data']}", ln=True)
+    pdf.cell(0, 10, f"Data Intervento: {row['Data']}", ln=True)
     pdf.cell(0, 10, f"Veicolo: {row['Targa']} | Operatore: {row['User']}", ln=True)
     pdf.ln(10); pdf.cell(0, 10, f"Chilometri registrati: {row['KM_Attuali']} km", ln=True)
     pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 10, f"PROSSIMO TAGLIANDO: {row['KM_prossimo_Tagliando']} km", ln=True)
     pdf.cell(0, 10, f"PROSSIME GOMME: {row['KM_prossime_Gomme']} km", ln=True)
     pdf.ln(10); pdf.set_font("Arial", "", 11)
-    pdf.multi_cell(0, 10, f"Note: {row['Altro']}")
+    pdf.multi_cell(0, 10, f"Note salvate: {row['Altro']}")
     return pdf.output(dest='S').encode('latin-1')
 
 # --- LOGIN ---
@@ -85,20 +85,23 @@ if 'user' not in st.session_state:
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown(f"### Benvenuto\n**{st.session_state.user}**")
-    menu = st.radio("Menu:", ["🏠 Nuovo Intervento", "⚠️ Segnala Guasto", "📋 Archivio & Admin"])
+    st.divider()
+    menu = st.radio("Scegli operazione:", ["🏠 Nuovo Intervento", "⚠️ Segnala Guasto", "📋 Archivio & Admin"])
+    st.divider()
     if st.button("Esci"):
-        del st.session_state.user; st.rerun()
+        del st.session_state.user
+        st.rerun()
 
 # --- PAGINA 1: NUOVO INTERVENTO ---
 if menu == "🏠 Nuovo Intervento":
     df_man = carica_dati("Manutenzione")
     df_seg = carica_dati("Segnalazioni")
-    st.markdown("<h1>🛠 Registro Manutenzione</h1>", unsafe_allow_html=True)
+    st.markdown("<h1>🛠 Registro Intervento</h1>", unsafe_allow_html=True)
     
     if 'mostra_camera' not in st.session_state: st.session_state.mostra_camera = False
     
     if not st.session_state.mostra_camera:
-        if st.button("📷 SCANSIONA TARGA VEICOLO", use_container_width=True):
+        if st.button("📷 SCANSIONA TARGA", use_container_width=True):
             st.session_state.mostra_camera = True; st.rerun()
     else:
         foto = st.camera_input("Inquadra la targa")
@@ -110,37 +113,42 @@ if menu == "🏠 Nuovo Intervento":
                 st.session_state.mostra_camera = False; st.rerun()
             except:
                 st.session_state.mostra_camera = False; st.rerun()
-        if st.button("Annulla"): st.session_state.mostra_camera = False; st.rerun()
+        if st.button("Chiudi Scanner"): st.session_state.mostra_camera = False; st.rerun()
 
     lista_t = sorted(df_man['Targa'].unique()) if not df_man.empty else ["GG730AV"]
     t_init = st.session_state.get('targa_ocr', lista_t[0])
     if t_init not in lista_t: t_init = lista_t[0]
-    t_sel = st.selectbox("Veicolo Selezionato", lista_t, index=lista_t.index(t_init))
+    t_sel = st.selectbox("Seleziona Veicolo", lista_t, index=lista_t.index(t_init))
     
+    # Alert Guasti Aperti
     guasti_aperti = df_seg[(df_seg['Targa'] == t_sel) & (df_seg['Stato'] == 'APERTO')]
     if not guasti_aperti.empty:
         st.markdown(f"<div class='alert-guasto'>⚠️ <b>ATTENZIONE!</b> {len(guasti_aperti)} guasti segnalati:</div>", unsafe_allow_html=True)
-        for _, g in guasti_aperti.iterrows(): st.write(f"• {g['Descrizione']}")
+        for _, g in guasti_aperti.iterrows():
+            st.write(f"• {g['Descrizione']}")
 
     st.divider()
     idx = df_man.index[df_man['Targa'] == t_sel].tolist()[0]
-    km_att = st.number_input("Chilometri oggi", value=safe_int(df_man.at[idx, 'KM_Attuali']), step=1)
+    km_att = st.number_input("Chilometri rilevati oggi", value=safe_int(df_man.at[idx, 'KM_Attuali']), step=1)
+    
     km_pross_t = km_att + 30000
     km_pross_g = km_att + 40000
     col1, col2 = st.columns(2)
     col1.markdown(f"<div class='scadenza-box tagliando'><small>TAGLIANDO A</small><br><b style='font-size:24px;'>{km_pross_t} km</b></div>", unsafe_allow_html=True)
     col2.markdown(f"<div class='scadenza-box gomme'><small>GOMME A</small><br><b style='font-size:24px;'>{km_pross_g} km</b></div>", unsafe_allow_html=True)
 
-    check_t = st.checkbox("⚙️ Tagliando completato")
-    check_g = st.checkbox("🛞 Cambio gomme completato")
+    c1, c2 = st.columns(2)
+    check_t = c1.checkbox("⚙️ Tagliando completato")
+    check_g = c2.checkbox("🛞 Cambio gomme completato")
     
     lavori_chiusi = []
     if not guasti_aperti.empty:
         st.markdown("### Riparazione Guasti")
         for i, g in guasti_aperti.iterrows():
-            if st.checkbox(f"Riparato: {g['Descrizione']}", key=f"fix_{i}"): lavori_chiusi.append(i)
+            if st.checkbox(f"Ho riparato: {g['Descrizione']}", key=f"fix_{i}"):
+                lavori_chiusi.append(i)
 
-    altro = st.text_area("Note aggiuntive")
+    altro = st.text_area("Note e lavori extra")
 
     if st.button("💾 SALVA INTERVENTO", use_container_width=True, type="primary"):
         df_man.at[idx, 'KM_Attuali'] = str(km_att)
@@ -158,9 +166,10 @@ if menu == "🏠 Nuovo Intervento":
             conn.update(worksheet="Segnalazioni", data=df_seg)
 
         nuovo_s = pd.DataFrame([{"Targa": t_sel, "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "KM_Attuali": str(km_att), "KM_prossimo_Tagliando": str(km_pross_t), "KM_prossime_Gomme": str(km_pross_g), "User": st.session_state.user, "Altro": altro}])
+        df_storico_v = carica_dati("Storico")
+        
         conn.update(worksheet="Manutenzione", data=df_man)
-        df_sto_v = carica_dati("Storico")
-        conn.update(worksheet="Storico", data=pd.concat([df_sto_v, nuovo_s], ignore_index=True))
+        conn.update(worksheet="Storico", data=pd.concat([df_storico_v, nuovo_s], ignore_index=True))
         st.success("✅ Salvato!"); st.balloons()
 
 # --- PAGINA 2: SEGNALA GUASTO ---
@@ -174,7 +183,7 @@ elif menu == "⚠️ Segnala Guasto":
         if st.button("📷 SCANSIONA TARGA", use_container_width=True):
             st.session_state.mostra_camera_guasto = True; st.rerun()
     else:
-        foto = st.camera_input("Inquadra la targa del mezzo")
+        foto = st.camera_input("Inquadra la targa")
         if foto:
             try:
                 model = genai.GenerativeModel(MODELLO_ATTIVO)
@@ -183,7 +192,7 @@ elif menu == "⚠️ Segnala Guasto":
                 st.session_state.mostra_camera_guasto = False; st.rerun()
             except:
                 st.session_state.mostra_camera_guasto = False; st.rerun()
-        if st.button("Chiudi"): st.session_state.mostra_camera_guasto = False; st.rerun()
+        if st.button("Chiudi Scanner"): st.session_state.mostra_camera_guasto = False; st.rerun()
 
     lista_t = sorted(df_man['Targa'].unique()) if not df_man.empty else ["GG730AV"]
     t_init = st.session_state.get('targa_ocr_guasto', lista_t[0])
@@ -206,36 +215,45 @@ elif menu == "📋 Archivio & Admin":
         df_seg = carica_dati("Segnalazioni")
         df_sto = carica_dati("Storico")
         
-        # 🚨 SEZIONE SEGNALAZIONI ATTIVE E STORICO GUASTI
-        st.subheader("🛠 Stato Guasti del Veicolo")
-        t_search = st.selectbox("Seleziona Veicolo per vedere i guasti:", sorted(df_sto['Targa'].unique()))
+        # --- RIEPILOGO GLOBALE GUASTI APERTI ---
+        st.subheader("🚨 Guasti Attivi (Tutta la Flotta)")
+        df_global_aperti = df_seg[df_seg['Stato'] == 'APERTO']
         
-        guasti_mezzo = df_seg[df_seg['Targa'] == t_search].sort_index(ascending=False)
-        
-        if guasti_mezzo.empty:
-            st.info("Nessuna segnalazione trovata per questo mezzo.")
-        else:
-            for _, r in guasti_mezzo.iterrows():
-                # Colore in base allo stato
-                if r['Stato'] == 'CHIUSO':
-                    tag_stato = '<span class="status-riparato">Stato: Riparato</span>'
-                else:
-                    tag_stato = '<span class="status-aperto">Stato: Non ancora riparato</span>'
-                
+        if not df_global_aperti.empty:
+            for _, r in df_global_aperti.iterrows():
+                ritardo = (datetime.now() - datetime.strptime(r['Data_Segnalazione'], "%d/%m/%Y")).days >= 2
+                colore = "#ff4b4b" if ritardo else "#3b82f6"
                 st.markdown(f"""
-                <div style='border-bottom: 1px solid #333; padding: 10px 0;'>
-                    {tag_stato} <br>
-                    <b>Data:</b> {r['Data_Segnalazione']} | <b>Problema:</b> {r['Descrizione']} <br>
-                    <small>Urgenza: {r['Urgenza']} | Segnalato da: {r['Operatore']}</small>
+                <div style='border: 1px solid {colore}; padding: 10px; border-radius: 10px; margin-bottom: 10px;'>
+                    <b style='color:{colore}'>{r['Targa']}</b> - {r['Descrizione']} <br>
+                    <small>Segnalato il {r['Data_Segnalazione']} | {'🚨 <b>RITARDO (Oltre 48h)</b>' if ritardo else '⏳ In attesa'}</small>
                 </div>
                 """, unsafe_allow_html=True)
+        else:
+            st.success("Nessun guasto aperto in tutta la flotta.")
 
         st.divider()
         
-        # 📄 SEZIONE ARCHIVIO REPORT PDF
-        st.subheader("📄 Archivio Report Manutenzione")
-        for i, r in df_sto[df_sto['Targa'] == t_search].sort_index(ascending=False).iterrows():
-            with st.expander(f"Report del {r['Data']} - Chilometri: {r['KM_Attuali']} km"):
-                st.write(f"Operatore: {r['User']}")
-                st.write(f"Note: {r['Altro']}")
-                st.download_button("📥 Scarica PDF Originale", data=genera_pdf_storico(r), file_name=f"Report_{t_search}.pdf", key=f"pdf_{i}")
+        # --- RICERCA PER SINGOLO VEICOLO ---
+        st.subheader("🔍 Storico Dettagliato per Veicolo")
+        t_search = st.selectbox("Seleziona Veicolo:", sorted(df_man['Targa'].unique()))
+        
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            st.write("**Cronologia Guasti:**")
+            guasti_mezzo = df_seg[df_seg['Targa'] == t_search].sort_index(ascending=False)
+            if guasti_mezzo.empty:
+                st.info("Nessuna segnalazione.")
+            else:
+                for _, r in guasti_mezzo.iterrows():
+                    tag = '<span class="status-riparato">Riparato</span>' if r['Stato'] == 'CHIUSO' else '<span class="status-aperto">Non riparato</span>'
+                    st.markdown(f"• {r['Data_Segnalazione']}: {r['Descrizione']} | {tag}", unsafe_allow_html=True)
+        
+        with col_g2:
+            st.write("**Archivio Report PDF:**")
+            cron_sto = df_sto[df_sto['Targa'] == t_search].sort_index(ascending=False)
+            if cron_sto.empty:
+                st.info("Nessun report.")
+            else:
+                for i, r in cron_sto.iterrows():
+                    st.download_button(f"📄 Report {r['Data']} ({r['KM_Attuali']} km)", data=genera_pdf_storico(r), file_name=f"Report_{t_search}.pdf", key=f"pdf_{i}")
