@@ -7,8 +7,12 @@ import PIL.Image
 from fpdf import FPDF
 import io
 
-# --- CONFIGURAZIONE ---
-st.set_page_config(page_title="GSSA GESTIONE PRO", layout="wide")
+# --- CONFIGURAZIONE PAGINA ---
+st.set_page_config(page_title="GSSA GESTIONE PRO 2026", layout="wide")
+
+# Inizializzazione variabili di sessione
+if 'is_admin' not in st.session_state:
+    st.session_state.is_admin = False
 
 # --- STILE CSS PREMIUM ---
 st.markdown("""
@@ -72,7 +76,7 @@ def genera_pdf_storico(row):
     pdf.multi_cell(0, 10, f"Note salvate: {row['Altro']}")
     return pdf.output(dest='S').encode('latin-1')
 
-# --- LOGIN ---
+# --- LOGIN UTENTE ---
 if 'user' not in st.session_state:
     st.markdown("<h1 style='text-align: center;'>🚚 GSSA PORTAL</h1>", unsafe_allow_html=True)
     nome = st.text_input("Inserisci il tuo Nome e Cognome")
@@ -88,8 +92,8 @@ with st.sidebar:
     st.divider()
     menu = st.radio("Scegli operazione:", ["🏠 Nuovo Intervento", "⚠️ Segnala Guasto", "📋 Archivio & Admin"])
     st.divider()
-    if st.button("Esci"):
-        del st.session_state.user
+    if st.button("Esci dal portale"):
+        st.session_state.clear()
         st.rerun()
 
 # --- PAGINA 1: NUOVO INTERVENTO ---
@@ -101,7 +105,7 @@ if menu == "🏠 Nuovo Intervento":
     if 'mostra_camera' not in st.session_state: st.session_state.mostra_camera = False
     
     if not st.session_state.mostra_camera:
-        if st.button("📷 SCANSIONA TARGA VEICOLO", use_container_width=True):
+        if st.button("📷 SCANSIONA TARGA", use_container_width=True):
             st.session_state.mostra_camera = True; st.rerun()
     else:
         foto = st.camera_input("Inquadra la targa")
@@ -113,14 +117,13 @@ if menu == "🏠 Nuovo Intervento":
                 st.session_state.mostra_camera = False; st.rerun()
             except:
                 st.session_state.mostra_camera = False; st.rerun()
-        if st.button("Annulla"): st.session_state.mostra_camera = False; st.rerun()
+        if st.button("Chiudi Scanner"): st.session_state.mostra_camera = False; st.rerun()
 
     lista_t = sorted(df_man['Targa'].unique()) if not df_man.empty else ["GG730AV"]
     t_init = st.session_state.get('targa_ocr', lista_t[0])
     if t_init not in lista_t: t_init = lista_t[0]
-    t_sel = st.selectbox("Veicolo Selezionato", lista_t, index=lista_t.index(t_init))
+    t_sel = st.selectbox("Seleziona Veicolo", lista_t, index=lista_t.index(t_init))
     
-    # Alert Guasti Aperti
     guasti_aperti = df_seg[(df_seg['Targa'] == t_sel) & (df_seg['Stato'] == 'APERTO')]
     if not guasti_aperti.empty:
         st.markdown(f"<div class='alert-guasto'>⚠️ <b>ATTENZIONE!</b> {len(guasti_aperti)} guasti segnalati:</div>", unsafe_allow_html=True)
@@ -148,7 +151,7 @@ if menu == "🏠 Nuovo Intervento":
             if st.checkbox(f"Ho riparato: {g['Descrizione']}", key=f"fix_{i}"):
                 lavori_chiusi.append(i)
 
-    altro = st.text_area("Note aggiuntive")
+    altro = st.text_area("Note e lavori extra")
 
     if st.button("💾 SALVA INTERVENTO", use_container_width=True, type="primary"):
         df_man.at[idx, 'KM_Attuali'] = str(km_att)
@@ -208,11 +211,28 @@ elif menu == "⚠️ Segnala Guasto":
         conn.update(worksheet="Segnalazioni", data=pd.concat([df_s_v, nuova_s], ignore_index=True))
         st.error("Segnalazione inviata!"); st.session_state.targa_ocr_guasto = ""
 
-# --- PAGINA 3: ARCHIVIO & ADMIN ---
+# --- PAGINA 3: ARCHIVIO & ADMIN (CON LOGIN PERSISTENTE) ---
 elif menu == "📋 Archivio & Admin":
     st.markdown("<h1>📋 Dashboard & Archivio</h1>", unsafe_allow_html=True)
-    if st.text_input("Password Admin", type="password") == "GSSA2026":
-        # CARICHIAMO TUTTI I DATI NECESSARI
+    
+    # Controllo se l'utente è già autenticato come Admin
+    if not st.session_state.is_admin:
+        pwd = st.text_input("Inserisci Password Amministratore", type="password")
+        if st.button("SBLOCCA DASHBOARD", use_container_width=True):
+            if pwd == "GSSA2026":
+                st.session_state.is_admin = True
+                st.success("Accesso Admin Garantito!")
+                st.rerun()
+            else:
+                st.error("Password errata.")
+    
+    # Se autenticato, mostra la dashboard
+    if st.session_state.is_admin:
+        if st.button("🔒 Esci da Admin (Blocca)"):
+            st.session_state.is_admin = False
+            st.rerun()
+            
+        # Carichiamo i dati
         df_man = carica_dati("Manutenzione")
         df_seg = carica_dati("Segnalazioni")
         df_sto = carica_dati("Storico")
@@ -222,32 +242,53 @@ elif menu == "📋 Archivio & Admin":
         df_global_aperti = df_seg[df_seg['Stato'] == 'APERTO']
         
         if not df_global_aperti.empty:
-            for _, r in df_global_aperti.iterrows():
+            for i, r in df_global_aperti.iterrows():
                 ritardo = (datetime.now() - datetime.strptime(r['Data_Segnalazione'], "%d/%m/%Y")).days >= 2
                 colore = "#ff4b4b" if ritardo else "#3b82f6"
-                st.markdown(f"""
-                <div style='border: 1px solid {colore}; padding: 10px; border-radius: 10px; margin-bottom: 10px;'>
-                    <b style='color:{colore}'>{r['Targa']}</b> - {r['Descrizione']} <br>
-                    <small>Segnalato il {r['Data_Segnalazione']} | {'🚨 <b>RITARDO (Oltre 48h)</b>' if ritardo else '⏳ In attesa'}</small>
-                </div>
-                """, unsafe_allow_html=True)
+                
+                with st.container():
+                    st.markdown(f"""
+                    <div style='border: 1px solid {colore}; padding: 15px; border-radius: 10px; margin-bottom: 10px;'>
+                        <b style='color:{colore}; font-size:18px;'>{r['Targa']}</b><br>
+                        <b>Problema:</b> {r['Descrizione']}<br>
+                        <small>Segnalato il {r['Data_Segnalazione']} da {r['Operatore']} | {'🚨 <b>RITARDO</b>' if ritardo else '⏳ In attesa'}</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    if st.button(f"✅ Segna {r['Targa']} come Riparato", key=f"admin_fix_{i}"):
+                        df_seg.at[i, 'Stato'] = 'CHIUSO'
+                        conn.update(worksheet="Segnalazioni", data=df_seg)
+                        # Storico automatico
+                        idx_m = df_man.index[df_man['Targa'] == r['Targa']].tolist()[0]
+                        nuovo_s = pd.DataFrame([{
+                            "Targa": r['Targa'],
+                            "Data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                            "KM_Attuali": df_man.at[idx_m, 'KM_Attuali'],
+                            "KM_prossimo_Tagliando": df_man.at[idx_m, 'KM_prossimo Tagliando'],
+                            "KM_prossime_Gomme": df_man.at[idx_m, 'KM_prossime Gomme'],
+                            "User": st.session_state.user,
+                            "Altro": f"RIPARAZIONE ADMIN: {r['Descrizione']}"
+                        }])
+                        df_sto_v = carica_dati("Storico")
+                        conn.update(worksheet="Storico", data=pd.concat([df_sto_v, nuovo_s], ignore_index=True))
+                        st.rerun()
         else:
-            st.success("Nessun guasto aperto in tutta la flotta.")
+            st.success("Nessun guasto aperto.")
 
         st.divider()
         
         # --- RICERCA PER SINGOLO VEICOLO ---
-        st.subheader("🔍 Storico Dettagliato per Veicolo")
+        st.subheader("🔍 Dettaglio Veicolo")
         t_search = st.selectbox("Seleziona Veicolo:", sorted(df_man['Targa'].unique()))
         
         col_g1, col_g2 = st.columns(2)
         with col_g1:
-            st.write("**Cronologia Guasti:**")
+            st.write("**Cronologia Segnalazioni:**")
             guasti_mezzo = df_seg[df_seg['Targa'] == t_search].sort_index(ascending=False)
             if guasti_mezzo.empty:
                 st.info("Nessuna segnalazione.")
             else:
-                for _, r in guasti_mezzo.iterrows():
+                for i, r in guasti_mezzo.iterrows():
                     tag = '<span class="status-riparato">Riparato</span>' if r['Stato'] == 'CHIUSO' else '<span class="status-aperto">Non riparato</span>'
                     st.markdown(f"• {r['Data_Segnalazione']}: {r['Descrizione']} | {tag}", unsafe_allow_html=True)
         
