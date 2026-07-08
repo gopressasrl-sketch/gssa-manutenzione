@@ -14,23 +14,28 @@ st.set_page_config(page_title="GOPRESSA MISSION CONTROL", layout="wide", initial
 if 'pagina' not in st.session_state: st.session_state.pagina = "home"
 if 'show_cam' not in st.session_state: st.session_state.show_cam = False
 if 'foto_salvata' not in st.session_state: st.session_state.foto_salvata = None
-if 'is_admin' not in st.session_state: st.session_state.is_admin = True # Admin sempre attivo senza password
+if 'is_admin' not in st.session_state: st.session_state.is_admin = True 
 
-# --- STILE CSS EXTREME (RIMUOVE TUTTO IL SUPERFLUO) ---
+# --- STILE CSS EXTREME (CANCELLA TUTTE LE ICONE STREAMLIT) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@300;500;700&display=swap');
     
-    /* RIMUOVE CORONA, SPINNER, FOOTER E HEADER */
-    [data-testid="stStatusWidget"], .stDeployButton, header, footer, #MainMenu {
-        visibility: hidden;
+    /* 1. CANCELLA DEFINITIVAMENTE CORONA, CERCHIETTO BLU E BARRE STRANE */
+    #MainMenu, header, footer, [data-testid="stStatusWidget"], .stDeployButton {
         display: none !important;
+        visibility: hidden !important;
     }
     
-    /* Rimuove la barra grigia in fondo e i tasti di gestione */
-    .viewerBadge_container__1QSob, .viewerBadge_link__1QSob { display: none !important; }
+    /* Questo colpisce il badge "Manage App" di Streamlit Cloud */
+    .viewerBadge_container__1QSob, .viewerBadge_link__1QSob, div[class^="viewerBadge"] {
+        display: none !important;
+    }
+
+    /* Rimuove toolbar in alto a destra */
     div[data-testid="stToolbar"] { display: none !important; }
 
+    /* 2. DESIGN DEEP SPACE */
     .stApp {
         background: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #0f172a 50%, #020617 100%);
         background-attachment: fixed; color: #f8fafc; font-family: 'Rajdhani', sans-serif;
@@ -118,7 +123,6 @@ if 'user' not in st.session_state:
 # --- HEADER FISSO ---
 st.markdown(f'<div class="header-container"><h1 class="main-title">GOPRESSA</h1><p>UNIT: {st.session_state.user}</p></div>', unsafe_allow_html=True)
 
-# CARICAMENTO DATI
 df_man = carica_dati("Manutenzione")
 df_drivers = carica_dati("AnagraficaDriver")
 lista_mezzi = sorted(df_man['Targa'].unique().tolist()) if not df_man.empty else []
@@ -169,7 +173,7 @@ elif st.session_state.pagina == "manutenzione":
         conn.update(worksheet="Storico", data=pd.concat([df_sto_v, nuovo_s], ignore_index=True))
         st.success("OK"); st.session_state.pagina = "home"; st.rerun()
 
-# --- SEGNALA DANNO ---
+# --- SEGNALA DANNO (DRIVER) ---
 elif st.session_state.pagina == "danno":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
     st.markdown("<h2>💥 SEGNALA DANNO DRIVER</h2>", unsafe_allow_html=True)
@@ -192,7 +196,7 @@ elif st.session_state.pagina == "danno":
         conn.update(worksheet="DanniDriver", data=pd.concat([df_d_v, nuovo_d], ignore_index=True))
         reset_camera(); st.session_state.pagina = "home"; st.rerun()
 
-# --- SEGNALA GUASTO ---
+# --- SEGNALA GUASTO (MEZZO) ---
 elif st.session_state.pagina == "guasto":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
     st.markdown("<h2>🚨 ANOMALIA MEZZO</h2>", unsafe_allow_html=True)
