@@ -8,75 +8,109 @@ import io
 # --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="GOPRESSA PRO", layout="wide", initial_sidebar_state="collapsed")
 
-# --- STILE CSS PREMIUM (DESIGN DASHBOARD) ---
+# --- DESIGN ESTETICO AVANZATO (CSS) ---
 st.markdown("""
     <style>
+    /* Sfondo animato e font */
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap');
+    
     .stApp {
-        background: linear-gradient(135deg, #0e1117 0%, #1c1f26 100%);
+        background: radial-gradient(circle at top left, #1a1c2c, #0e1117);
+        color: #e0e0e0;
+        font-family: 'Inter', sans-serif;
     }
-    
-    /* Header Gopressa */
-    .gopressa-header {
-        background: rgba(255, 75, 75, 0.1);
-        padding: 30px;
-        border-radius: 20px;
-        border: 1px solid rgba(255, 75, 75, 0.3);
+
+    /* Header Aziendale */
+    .brand-container {
+        padding: 40px 20px;
         text-align: center;
-        margin-bottom: 30px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 30px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 40px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.2);
     }
     
-    .gopressa-header h1 {
-        color: #ff4b4b !important;
+    .brand-title {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 3.5em !important;
+        font-weight: 700;
+        background: linear-gradient(90deg, #ff4b4b, #ff8e8e);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: 5px;
         margin: 0;
-        letter-spacing: 3px;
-        font-weight: 800;
     }
 
-    /* Card per i pulsanti del menu */
-    .menu-card {
-        background: rgba(30, 34, 45, 0.8);
-        padding: 20px;
-        border-radius: 15px;
-        border: 1px solid rgba(255,255,255,0.1);
+    .brand-subtitle {
+        font-size: 1.1em;
+        color: #808495;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-top: 10px;
+    }
+
+    /* Card Menu (Mattonelle) */
+    .menu-tile {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(15px);
+        border-radius: 25px;
+        padding: 30px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         text-align: center;
-        transition: 0.3s;
-        margin-bottom: 15px;
+        transition: all 0.4s ease;
+        cursor: pointer;
+        height: 250px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
     }
 
-    /* Pulsanti grandi tipo App */
+    .menu-tile:hover {
+        background: rgba(255, 75, 75, 0.1);
+        border: 1px solid #ff4b4b;
+        transform: translateY(-10px);
+        box-shadow: 0 10px 30px rgba(255, 75, 75, 0.2);
+    }
+
+    /* Pulsanti Streamlit ridisegnati */
     .stButton>button {
-        width: 100% !important;
-        height: 60px !important;
-        border-radius: 15px !important;
-        background: linear-gradient(90deg, #ff4b4b 0%, #ff7676 100%) !important;
+        width: 100%;
+        border-radius: 20px !important;
+        background: linear-gradient(135deg, #ff4b4b 0%, #c11212 100%) !important;
         color: white !important;
-        font-size: 1.2em !important;
-        font-weight: bold !important;
         border: none !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+        padding: 20px !important;
+        font-size: 1.1em !important;
+        font-weight: 600 !important;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3) !important;
+        transition: 0.3s !important;
     }
     
-    /* Pulsante Indietro */
-    .back-btn button {
-        background: #3e4451 !important;
-        height: 40px !important;
+    .stButton>button:hover {
+        transform: scale(1.02) !important;
+        box-shadow: 0 10px 25px rgba(255, 75, 75, 0.4) !important;
     }
 
     /* Box Scadenze */
-    .scadenza-box {
-        padding: 20px;
-        border-radius: 15px;
+    .status-card {
+        padding: 25px;
+        border-radius: 20px;
         text-align: center;
-        color: white;
+        font-weight: bold;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
     }
-    .tagliando { background: #1e3a8a; }
-    .gomme { background: #064e3b; }
-    
+    .tagl-card { background: linear-gradient(135deg, #1e40af, #3b82f6); }
+    .gomme-card { background: linear-gradient(135deg, #065f46, #10b981); }
+
+    /* Rimuovi decorazioni Streamlit */
     #MainMenu, footer, header {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNZIONI DATABASE ---
+# --- FUNZIONI CORE ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def safe_int(val):
@@ -90,67 +124,77 @@ def carica_dati(foglio):
 def genera_pdf_storico(row):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 15, "GOPRESSA SRL - REPORT INTERVENTO", ln=True, align='C')
-    pdf.ln(10); pdf.set_font("Arial", "", 12)
+    pdf.set_font("Arial", "B", 18)
+    pdf.set_text_color(200, 0, 0)
+    pdf.cell(0, 15, "GOPRESSA SRL - OFFICIAL REPORT", ln=True, align='C')
+    pdf.ln(10); pdf.set_font("Arial", "", 12); pdf.set_text_color(0, 0, 0)
     pdf.cell(0, 8, f"Data: {row['Data']}", ln=True)
     pdf.cell(0, 8, f"Mezzo: {row['Targa']} | Operatore: {row['User']}", ln=True)
     pdf.ln(10); pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 8, f"KM al momento: {row['KM_Attuali']} km", ln=True)
-    pdf.cell(0, 8, f"PROSSIMO TAGLIANDO: {row['KM_prossimo_Tagliando']} km", ln=True)
-    pdf.cell(0, 8, f"PROSSIME GOMME: {row['KM_prossime_Gomme']} km", ln=True)
-    pdf.ln(10); pdf.set_font("Arial", "", 11)
-    pdf.multi_cell(0, 8, f"Note: {row['Altro']}")
+    pdf.cell(0, 10, f"KM REGISTRATI: {row['KM_Attuali']} km", ln=True)
+    pdf.cell(0, 10, f"PROSSIMO TAGLIANDO: {row['KM_prossimo_Tagliando']} km", ln=True)
+    pdf.cell(0, 10, f"PROSSIME GOMME: {row['KM_prossime_Gomme']} km", ln=True)
+    pdf.ln(10); pdf.set_font("Arial", "I", 11)
+    pdf.multi_cell(0, 10, f"Note Intervento: {row['Altro']}")
     return pdf.output(dest='S').encode('latin-1')
 
 # --- LOGICA NAVIGAZIONE ---
 if 'pagina' not in st.session_state: st.session_state.pagina = "home"
 if 'is_admin' not in st.session_state: st.session_state.is_admin = False
 
-def vai_a(nome_pagina):
-    st.session_state.pagina = nome_pagina
+def vai_a(nome):
+    st.session_state.pagina = nome
     st.rerun()
 
-# --- LOGIN ---
+# --- LOGIN SCREEN ---
 if 'user' not in st.session_state:
-    st.markdown("""<div class="gopressa-header"><h1>GOPRESSA SRL</h1><p>Dispatcher Management</p></div>""", unsafe_allow_html=True)
-    nome = st.text_input("Inserisci il tuo Nome e Cognome per accedere:")
-    if st.button("ACCEDI AL PORTALE"):
-        if nome:
-            st.session_state.user = nome.upper()
-            st.rerun()
+    st.markdown('<div class="brand-container"><h1 class="brand-title">GOPRESSA</h1><p class="brand-subtitle">Dispatcher Portal Access</p></div>', unsafe_allow_html=True)
+    col_l1, col_l2, col_l3 = st.columns([1,2,1])
+    with col_l2:
+        nome = st.text_input("👤 Nome e Cognome Operatore")
+        if st.button("ACCEDI AL PORTALE"):
+            if nome:
+                st.session_state.user = nome.upper()
+                st.rerun()
     st.stop()
 
 # --- HEADER FISSO ---
-st.markdown(f"""
-    <div class="gopressa-header">
-        <h1>GOPRESSA SRL</h1>
-        <p>Operatore: {st.session_state.user}</p>
+st.markdown(f'''
+    <div class="brand-container">
+        <h1 class="brand-title">GOPRESSA</h1>
+        <p class="brand-subtitle">Bentornato, {st.session_state.user}</p>
     </div>
-    """, unsafe_allow_html=True)
+''', unsafe_allow_html=True)
 
 df_man = carica_dati("Manutenzione")
 lista_mezzi = sorted(df_man['Targa'].unique().tolist()) if not df_man.empty else []
 
-# --- PAGINA HOME (IL NUOVO MENU) ---
+# --- HOME DASHBOARD ---
 if st.session_state.pagina == "home":
-    st.markdown("<h3 style='text-align:center;'>Scegli un'operazione:</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align:center; margin-bottom:30px;'>⚙️ SELEZIONA ATTIVITÀ</h3>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("🏠 REGISTRO\nMANUTENZIONE"): vai_a("manutenzione")
-    with col2:
-        if st.button("⚠️ SEGNALA\nUN GUASTO"): vai_a("guasto")
-    with col3:
-        if st.button("📋 ARCHIVIO\n& ADMIN"): vai_a("admin")
     
-    if st.button("🚪 Esci dal sistema", use_container_width=False):
+    with col1:
+        st.markdown('<div class="menu-tile"><h2>🛠️</h2><p>MANUTENZIONE</p></div>', unsafe_allow_html=True)
+        if st.button("APRI REGISTRO", key="m1"): vai_a("manutenzione")
+        
+    with col2:
+        st.markdown('<div class="menu-tile"><h2>⚠️</h2><p>SEGNALA GUASTO</p></div>', unsafe_allow_html=True)
+        if st.button("INVIA REPORT", key="m2"): vai_a("guasto")
+        
+    with col3:
+        st.markdown('<div class="menu-tile"><h2>👑</h2><p>AREA ADMIN</p></div>', unsafe_allow_html=True)
+        if st.button("ACCEDI ARCHIVIO", key="m3"): vai_a("admin")
+    
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    if st.button("🚪 ESCI DAL SISTEMA"):
         st.session_state.clear()
         st.rerun()
 
-# --- PAGINA 1: MANUTENZIONE ---
+# --- PAGINA MANUTENZIONE ---
 elif st.session_state.pagina == "manutenzione":
-    if st.button("⬅️ TORNA AL MENU", key="back1"): vai_a("home")
+    if st.button("⬅️ MENU PRINCIPALE"): vai_a("home")
     
     st.markdown("<h2>🛠 Registro Intervento</h2>", unsafe_allow_html=True)
     df_seg = carica_dati("Segnalazioni")
@@ -158,27 +202,32 @@ elif st.session_state.pagina == "manutenzione":
     
     guasti_aperti = df_seg[(df_seg['Targa'] == t_sel) & (df_seg['Stato'] == 'APERTO')]
     if not guasti_aperti.empty:
-        st.error(f"⚠️ ATTENZIONE: Ci sono {len(guasti_aperti)} guasti aperti per questo mezzo!")
+        st.markdown(f"""<div style='background:rgba(255,75,75,0.2); padding:20px; border-radius:20px; border:1px solid #ff4b4b; margin-bottom:20px;'>
+            🚨 <b>NOTIFICA GUASTI:</b> {len(guasti_aperti)} segnalazioni attive!
+        </div>""", unsafe_allow_html=True)
 
     idx = df_man.index[df_man['Targa'] == t_sel].tolist()[0]
-    km_att = st.number_input("📟 KM Attuali:", value=safe_int(df_man.at[idx, 'KM_Attuali']), step=1)
+    km_att = st.number_input("📟 Chilometri attuali (cruscotto):", value=safe_int(df_man.at[idx, 'KM_Attuali']))
     
     c1, c2 = st.columns(2)
-    c1.markdown(f"<div class='scadenza-box tagliando'><small>PROSSIMO TAGLIANDO</small><br><b>{km_att + 30000} km</b></div>", unsafe_allow_html=True)
-    c2.markdown(f"<div class='scadenza-box gomme'><small>PROSSIME GOMME</small><br><b>{km_att + 40000} km</b></div>", unsafe_allow_html=True)
+    c1.markdown(f"<div class='status-card tagl-card'><small>PROSSIMO TAGLIANDO</small><br><span style='font-size:25px;'>{km_att + 30000} km</span></div>", unsafe_allow_html=True)
+    c2.markdown(f"<div class='status-card gomme-card'><small>PROSSIME GOMME</small><br><span style='font-size:25px;'>{km_att + 40000} km</span></div>", unsafe_allow_html=True)
 
-    st.write("---")
-    ch_t = st.checkbox("⚙️ Tagliando fatto")
-    ch_g = st.checkbox("🛞 Gomme cambiate")
+    st.markdown("<br>### 📋 CHECKLIST LAVORI", unsafe_allow_html=True)
+    col_a, col_b = st.columns(2)
+    ch_t = col_a.checkbox("⚙️ Tagliando Eseguito")
+    ch_g = col_b.checkbox("🛞 Gomme Cambiate")
     
     lavori_chiusi = []
     if not guasti_aperti.empty:
+        st.write("---")
+        st.write("🔧 Riparazioni Straordinarie:")
         for i, g in guasti_aperti.iterrows():
-            if st.checkbox(f"Riparato: {g['Descrizione']}", key=f"f_{i}"): lavori_chiusi.append(i)
+            if st.checkbox(f"Sistemato: {g['Descrizione']}", key=f"f_{i}"): lavori_chiusi.append(i)
 
-    altro = st.text_area("Note:")
+    altro = st.text_area("✍️ Note e altri dettagli:")
 
-    if st.button("💾 SALVA INTERVENTO"):
+    if st.button("💾 SALVA E ARCHIVIA"):
         df_man.at[idx, 'KM_Attuali'] = str(km_att)
         if ch_t:
             df_man.at[idx, 'KM_Tagliando'] = str(km_att)
@@ -197,43 +246,47 @@ elif st.session_state.pagina == "manutenzione":
         df_sto_v = carica_dati("Storico")
         conn.update(worksheet="Manutenzione", data=df_man)
         conn.update(worksheet="Storico", data=pd.concat([df_sto_v, nuovo_s], ignore_index=True))
-        st.success("✅ Salvato!"); st.balloons()
+        st.success("✅ Intervento registrato con successo!")
+        st.balloons()
 
-# --- PAGINA 2: SEGNALAZIONE ---
+# --- PAGINA SEGNALAZIONE ---
 elif st.session_state.pagina == "guasto":
-    if st.button("⬅️ TORNA AL MENU", key="back2"): vai_a("home")
-    st.markdown("<h2>⚠️ Report Guasto</h2>", unsafe_allow_html=True)
-    t_guasto = st.selectbox("Quale mezzo?", lista_mezzi)
-    desc = st.text_area("Descrivi il problema:")
-    urg = st.select_slider("Urgenza:", options=["BASSA", "MEDIA", "ALTA"])
+    if st.button("⬅️ MENU PRINCIPALE"): vai_a("home")
+    st.markdown("<h2>⚠️ Report Danni e Malfunzionamenti</h2>", unsafe_allow_html=True)
+    t_guasto = st.selectbox("Quale mezzo ha il problema?", lista_mezzi)
+    desc = st.text_area("Descrivi cosa non funziona:")
+    urg = st.select_slider("Quanto è urgente?", options=["BASSA", "MEDIA", "ALTA"])
     if st.button("INVIA SEGNALAZIONE"):
         nuova_s = pd.DataFrame([{"Targa": t_guasto, "Data_Segnalazione": datetime.now().strftime("%d/%m/%Y"), "Descrizione": desc, "Urgenza": urg, "Operatore": st.session_state.user, "Stato": "APERTO"}])
         df_s_v = carica_dati("Segnalazioni")
         conn.update(worksheet="Segnalazioni", data=pd.concat([df_s_v, nuova_s], ignore_index=True))
-        st.warning("⚠️ Inviato in officina."); vai_a("home")
+        st.error("🚨 Segnalazione inoltrata al Dispatcher."); vai_a("home")
 
-# --- PAGINA 3: ADMIN ---
+# --- PAGINA ADMIN ---
 elif st.session_state.pagina == "admin":
-    if st.button("⬅️ TORNA AL MENU", key="back3"): vai_a("home")
-    st.markdown("<h2>📋 Pannello Controllo</h2>", unsafe_allow_html=True)
+    if st.button("⬅️ MENU PRINCIPALE"): vai_a("home")
+    st.markdown("<h2>📋 Pannello di Gestione</h2>", unsafe_allow_html=True)
     
     if not st.session_state.is_admin:
-        pw = st.text_input("Password Admin", type="password")
-        if st.button("ACCEDI"):
+        pw = st.text_input("Inserisci Password Admin", type="password")
+        if st.button("SBLOCCA"):
             if pw == "GSSA2026": st.session_state.is_admin = True; st.rerun()
     
     if st.session_state.is_admin:
         df_seg = carica_dati("Segnalazioni")
         df_sto = carica_dati("Storico")
         
-        st.subheader("🚨 Guasti Attivi")
+        st.subheader("🚨 Guasti da Risolvere")
         df_aperti = df_seg[df_seg['Stato'] == 'APERTO']
-        for i, r in df_aperti.iterrows():
-            st.info(f"{r['Targa']}: {r['Descrizione']}")
-            if st.button(f"Sistemato {r['Targa']}##{i}"):
-                df_seg.at[i, 'Stato'] = 'CHIUSO'; conn.update(worksheet="Segnalazioni", data=df_seg); st.rerun()
+        if not df_aperti.empty:
+            for i, r in df_aperti.iterrows():
+                st.markdown(f"<div style='border-left:5px solid #ff4b4b; background:rgba(255,255,255,0.05); padding:15px; border-radius:15px; margin-bottom:10px;'><b>{r['Targa']}</b>: {r['Descrizione']}</div>", unsafe_allow_html=True)
+                if st.button(f"Segna come Riparato {r['Targa']}##{i}"):
+                    df_seg.at[i, 'Stato'] = 'CHIUSO'; conn.update(worksheet="Segnalazioni", data=df_seg); st.rerun()
+        else: st.success("Nessuna riparazione in sospeso.")
         
         st.divider()
-        t_search = st.selectbox("Storico Veicolo:", lista_mezzi)
+        st.subheader("📄 Archivio Documenti")
+        t_search = st.selectbox("Seleziona furgone per vedere i report:", lista_mezzi)
         for i, r in df_sto[df_sto['Targa'] == t_search].sort_index(ascending=False).iterrows():
-            st.download_button(f"📄 Report {r['Data']} ({r['KM_Attuali']} km)", data=genera_pdf_storico(r), file_name=f"Report.pdf", key=f"p_{i}")
+            st.download_button(f"📥 Scarica Report del {r['Data']} ({r['KM_Attuali']} km)", data=genera_pdf_storico(r), file_name=f"Report_{t_search}.pdf", key=f"p_{i}")
