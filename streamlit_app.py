@@ -87,13 +87,12 @@ with st.sidebar:
     if st.button("Esci"):
         del st.session_state.user; st.rerun()
 
-# --- PAGINA 1: NUOVO INTERVENTO (CON SCANNER) ---
+# --- PAGINA 1: NUOVO INTERVENTO ---
 if menu == "🏠 Nuovo Intervento":
     df_man = carica_dati("Manutenzione")
     df_seg = carica_dati("Segnalazioni")
     st.markdown("<h1>🛠 Registro Manutenzione</h1>", unsafe_allow_html=True)
     
-    # SCANNER TARGA (REINSERITO!)
     if 'mostra_camera' not in st.session_state: st.session_state.mostra_camera = False
     
     if not st.session_state.mostra_camera:
@@ -111,44 +110,37 @@ if menu == "🏠 Nuovo Intervento":
                 st.session_state.mostra_camera = False; st.rerun()
         if st.button("Annulla"): st.session_state.mostra_camera = False; st.rerun()
 
-    # Selezione Targa
     lista_t = sorted(df_man['Targa'].unique()) if not df_man.empty else ["GG730AV"]
     t_init = st.session_state.get('targa_ocr', lista_t[0])
     if t_init not in lista_t: t_init = lista_t[0]
     t_sel = st.selectbox("Veicolo Selezionato", lista_t, index=lista_t.index(t_init))
     
-    # Alert Guasti Aperti per il mezzo
     guasti_aperti = df_seg[(df_seg['Targa'] == t_sel) & (df_seg['Stato'] == 'APERTO')]
     if not guasti_aperti.empty:
-        st.markdown(f"<div class='alert-guasto'>⚠️ <b>ATTENZIONE!</b> {len(guasti_aperti)} guasti segnalati per questo mezzo:</div>", unsafe_allow_html=True)
-        for _, g in guasti_aperti.iterrows():
-            st.write(f"• {g['Descrizione']} ({g['Urgenza']})")
+        st.markdown(f"<div class='alert-guasto'>⚠️ <b>ATTENZIONE!</b> {len(guasti_aperti)} guasti segnalati:</div>", unsafe_allow_html=True)
+        for _, g in guasti_aperti.iterrows(): st.write(f"• {g['Descrizione']}")
 
     st.divider()
     idx = df_man.index[df_man['Targa'] == t_sel].tolist()[0]
     km_att = st.number_input("Chilometri oggi", value=safe_int(df_man.at[idx, 'KM_Attuali']), step=1)
-    
-    col1, col2 = st.columns(2)
     km_pross_t = km_att + 30000
     km_pross_g = km_att + 40000
+    col1, col2 = st.columns(2)
     col1.markdown(f"<div class='scadenza-box tagliando'><small>TAGLIANDO A</small><br><b style='font-size:24px;'>{km_pross_t} km</b></div>", unsafe_allow_html=True)
     col2.markdown(f"<div class='scadenza-box gomme'><small>GOMME A</small><br><b style='font-size:24px;'>{km_pross_g} km</b></div>", unsafe_allow_html=True)
 
     check_t = st.checkbox("⚙️ Tagliando completato")
     check_g = st.checkbox("🛞 Cambio gomme completato")
     
-    # Chiusura guasti
     lavori_chiusi = []
     if not guasti_aperti.empty:
         st.markdown("### Riparazione Guasti")
         for i, g in guasti_aperti.iterrows():
-            if st.checkbox(f"Riparato: {g['Descrizione']}", key=f"fix_{i}"):
-                lavori_chiusi.append(i)
+            if st.checkbox(f"Riparato: {g['Descrizione']}", key=f"fix_{i}"): lavori_chiusi.append(i)
 
     altro = st.text_area("Note aggiuntive")
 
     if st.button("💾 SALVA INTERVENTO", use_container_width=True, type="primary"):
-        # Update Manutenzione
         df_man.at[idx, 'KM_Attuali'] = str(km_att)
         if check_t:
             df_man.at[idx, 'KM_Tagliando'] = str(km_att)
@@ -159,34 +151,52 @@ if menu == "🏠 Nuovo Intervento":
         df_man.at[idx, 'Data'] = datetime.now().strftime("%d/%m/%Y")
         df_man.at[idx, 'User'] = st.session_state.user
         
-        # Update Segnalazioni
         if lavori_chiusi:
             for idx_g in lavori_chiusi: df_seg.at[idx_g, 'Stato'] = 'CHIUSO'
             conn.update(worksheet="Segnalazioni", data=df_seg)
 
-        # Update Storico
         nuovo_s = pd.DataFrame([{"Targa": t_sel, "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "KM_Attuali": str(km_att), "KM_prossimo_Tagliando": str(km_pross_t), "KM_prossime_Gomme": str(km_pross_g), "User": st.session_state.user, "Altro": altro}])
-        df_storico_v = carica_dati("Storico")
-        df_storico_n = pd.concat([df_storico_v, nuovo_s], ignore_index=True)
-        
         conn.update(worksheet="Manutenzione", data=df_man)
-        conn.update(worksheet="Storico", data=df_storico_n)
-        st.success("✅ Salvato!")
-        st.balloons()
+        df_sto_v = carica_dati("Storico")
+        conn.update(worksheet="Storico", data=pd.concat([df_sto_v, nuovo_s], ignore_index=True))
+        st.success("✅ Salvato!"); st.balloons()
 
-# --- PAGINA 2: SEGNALA GUASTO ---
+# --- PAGINA 2: SEGNALA GUASTO (CON SCANNER!) ---
 elif menu == "⚠️ Segnala Guasto":
     st.markdown("<h1>⚠️ Segnala Problema</h1>", unsafe_allow_html=True)
     df_man = carica_dati("Manutenzione")
-    t_guasto = st.selectbox("Veicolo", sorted(df_man['Targa'].unique()))
-    desc = st.text_area("Cosa c'è da fare?")
+    
+    # SCANNER TARGA ANCHE QUI!
+    if 'mostra_camera_guasto' not in st.session_state: st.session_state.mostra_camera_guasto = False
+    
+    if not st.session_state.mostra_camera_guasto:
+        if st.button("📷 SCANSIONA TARGA", use_container_width=True):
+            st.session_state.mostra_camera_guasto = True; st.rerun()
+    else:
+        foto = st.camera_input("Inquadra la targa del mezzo con il problema")
+        if foto:
+            try:
+                model = genai.GenerativeModel(MODELLO_ATTIVO)
+                res = model.generate_content(["Leggi la targa.", PIL.Image.open(foto)])
+                st.session_state.targa_ocr_guasto = res.text.strip().upper().replace(" ", "")
+                st.session_state.mostra_camera_guasto = False; st.rerun()
+            except:
+                st.session_state.mostra_camera_guasto = False; st.rerun()
+        if st.button("Chiudi"): st.session_state.mostra_camera_guasto = False; st.rerun()
+
+    lista_t = sorted(df_man['Targa'].unique()) if not df_man.empty else ["GG730AV"]
+    t_init = st.session_state.get('targa_ocr_guasto', lista_t[0])
+    if t_init not in lista_t: t_init = lista_t[0]
+    t_guasto = st.selectbox("Veicolo", lista_t, index=lista_t.index(t_init))
+    
+    desc = st.text_area("Descrizione del guasto")
     urg = st.select_slider("Urgenza", options=["BASSA", "MEDIA", "ALTA"])
     
     if st.button("INVIA SEGNALAZIONE", use_container_width=True, type="primary"):
         nuova_s = pd.DataFrame([{"Targa": t_guasto, "Data_Segnalazione": datetime.now().strftime("%d/%m/%Y"), "Descrizione": desc, "Urgenza": urg, "Operatore": st.session_state.user, "Stato": "APERTO"}])
         df_s_v = carica_dati("Segnalazioni")
         conn.update(worksheet="Segnalazioni", data=pd.concat([df_s_v, nuova_s], ignore_index=True))
-        st.error("Segnalazione inviata!")
+        st.error("Segnalazione inviata correttamente!"); st.session_state.targa_ocr_guasto = ""
 
 # --- PAGINA 3: ARCHIVIO & ADMIN ---
 elif menu == "📋 Archivio & Admin":
@@ -194,17 +204,13 @@ elif menu == "📋 Archivio & Admin":
     if st.text_input("Password Admin", type="password") == "GSSA2026":
         df_seg = carica_dati("Segnalazioni")
         df_sto = carica_dati("Storico")
-        
-        # Guasti in ritardo
         st.subheader("🚨 Guasti da riparare")
         df_aperti = df_seg[df_seg['Stato'] == 'APERTO']
         for i, r in df_aperti.iterrows():
             ritardo = (datetime.now() - datetime.strptime(r['Data_Segnalazione'], "%d/%m/%Y")).days >= 2
             colore = "#ff4b4b" if ritardo else "#3b82f6"
-            st.markdown(f"<div style='border:1px solid {colore}; padding:10px; border-radius:10px; margin-bottom:5px;'><b>{r['Targa']}</b>: {r['Descrizione']} (Segnalato il {r['Data_Segnalazione']}) {'🚨 <b>RITARDO</b>' if ritardo else ''}</div>", unsafe_allow_html=True)
-
-        st.divider()
-        st.subheader("📄 Archivio Report")
+            st.markdown(f"<div style='border:1px solid {colore}; padding:10px; border-radius:10px; margin-bottom:5px;'><b>{r['Targa']}</b>: {r['Descrizione']} (del {r['Data_Segnalazione']}) {'🚨 <b>RITARDO</b>' if ritardo else ''}</div>", unsafe_allow_html=True)
+        st.divider(); st.subheader("📄 Archivio Report")
         t_rep = st.selectbox("Mezzo", sorted(df_sto['Targa'].unique()))
         for i, r in df_sto[df_sto['Targa'] == t_rep].sort_index(ascending=False).iterrows():
             with st.expander(f"Report {r['Data']} - {r['KM_Attuali']} km"):
