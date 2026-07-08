@@ -3,3 +3,6 @@ st-gsheets-connection
 google-generativeai
 pandas
 Pillow
+fpdf
+google-api-python-client
+google-auth
