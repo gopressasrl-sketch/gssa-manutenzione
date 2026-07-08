@@ -4,6 +4,8 @@ import pandas as pd
 from datetime import datetime
 from fpdf import FPDF
 import io
+import base64
+from PIL import Image
 
 # --- CONFIGURAZIONE SISTEMA ---
 st.set_page_config(page_title="GOPRESSA MISSION CONTROL", layout="wide", initial_sidebar_state="collapsed")
@@ -31,11 +33,11 @@ st.markdown("""
     }
     .stButton>button {
         background: rgba(15, 23, 42, 0.6) !important; color: #00f2ff !important;
-        border: 1px solid #00f2ff !important; border-radius: 20px !important; padding: 20px !important;
-        font-size: 1.1em !important; font-weight: 700; text-transform: uppercase !important;
+        border: 1px solid #00f2ff !important; border-radius: 20px !important; padding: 25px !important;
+        font-size: 1.2em !important; font-weight: 700; text-transform: uppercase !important;
         transition: all 0.4s ease !important; width: 100%;
     }
-    .stButton>button:hover { background: #00f2ff !important; color: #000 !important; box-shadow: 0 0 40px #00f2ff !important; }
+    .stButton>button:hover { background: #00f2ff !important; color: #000 !important; box-shadow: 0 0 30px #00f2ff !important; }
     
     .status-card { padding: 20px; border-radius: 20px; text-align: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); }
     .val-neon { font-family: 'Orbitron', sans-serif; font-size: 28px; text-shadow: 0 0 10px #00d2ff; color: #00d2ff; }
@@ -47,7 +49,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNZIONI DATABASE ---
+# --- FUNZIONI CORE ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def safe_int(val):
@@ -59,11 +61,16 @@ def carica_dati(foglio):
         df = conn.read(worksheet=foglio, ttl=0)
         return df.fillna("").astype(str)
     except:
-        if foglio == "AnagraficaDriver": return pd.DataFrame(columns=["Nome", "Cognome"])
-        if foglio == "DanniDriver": return pd.DataFrame(columns=["Driver", "Targa", "Data", "Descrizione", "Stato", "Operatore"])
-        if foglio == "Segnalazioni": return pd.DataFrame(columns=["Targa", "Data_Segnalazione", "Descrizione", "Urgenza", "Operatore", "Stato"])
-        if foglio == "Manutenzione": return pd.DataFrame(columns=["Targa", "KM_Attuali", "KM_Gomme", "KM_prossime Gomme", "KM_Tagliando", "KM_prossimo Tagliando", "Data", "User", "Altro"])
         return pd.DataFrame()
+
+def process_image(uploaded_file):
+    """Comprime l'immagine per salvarla nel foglio Google"""
+    if uploaded_file is None: return ""
+    img = Image.open(uploaded_file)
+    img.thumbnail((400, 400)) # Ridimensiona per non appesantire il foglio
+    buffered = io.BytesIO()
+    img.save(buffered, format="JPEG", quality=60)
+    return base64.b64encode(buffered.getvalue()).decode()
 
 def genera_pdf_storico(row):
     pdf = FPDF()
@@ -119,7 +126,6 @@ if st.session_state.pagina == "home":
 # --- PAGINA MANUTENZIONE ---
 elif st.session_state.pagina == "manutenzione":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
-    st.markdown("<h2>🛠 REGISTRO INTERVENTO</h2>", unsafe_allow_html=True)
     t_sel = st.selectbox("🚛 SELEZIONA MEZZO", lista_mezzi)
     idx = df_man.index[df_man['Targa'] == t_sel].tolist()[0]
     km_att = st.number_input("📟 KM ATTUALI", value=safe_int(df_man.at[idx, 'KM_Attuali']))
@@ -142,95 +148,97 @@ elif st.session_state.pagina == "manutenzione":
         conn.update(worksheet="Storico", data=pd.concat([df_sto_v, nuovo_s], ignore_index=True))
         st.success("REGISTRATO"); st.session_state.pagina = "home"; st.rerun()
 
-# --- PAGINA SEGNALA DANNO ---
+# --- PAGINA SEGNALA DANNO (CON FOTO!) ---
 elif st.session_state.pagina == "danno":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
     st.markdown("<h2>💥 SEGNALA DANNO DRIVER</h2>", unsafe_allow_html=True)
     d_sel = st.selectbox("DRIVER", lista_drivers)
     t_sel = st.selectbox("VEICOLO", lista_mezzi)
     desc = st.text_area("DESCRIZIONE DANNO")
-    if st.button("INVIA REPORT"):
-        nuovo_d = pd.DataFrame([{"Driver": d_sel, "Targa": t_sel, "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "Descrizione": desc, "Stato": "APERTO", "Operatore": st.session_state.user}])
+    foto_danno = st.camera_input("📸 SCATTA FOTO DEL DANNO")
+    
+    if st.button("INVIA REPORT CON FOTO"):
+        stringa_foto = process_image(foto_danno)
+        nuovo_d = pd.DataFrame([{
+            "Driver": d_sel, "Targa": t_sel, "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), 
+            "Descrizione": desc, "Stato": "APERTO", "Operatore": st.session_state.user, "Foto": stringa_foto
+        }])
         df_d_v = carica_dati("DanniDriver")
         conn.update(worksheet="DanniDriver", data=pd.concat([df_d_v, nuovo_d], ignore_index=True))
-        st.error("INVIATO"); st.session_state.pagina = "home"; st.rerun()
+        st.error("🚨 REPORT E FOTO ARCHIVIATI."); st.session_state.pagina = "home"; st.rerun()
 
-# --- PAGINA SEGNALA GUASTO ---
+# --- PAGINA SEGNALA GUASTO (CON FOTO!) ---
 elif st.session_state.pagina == "guasto":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
+    st.markdown("<h2>🚨 SEGNALAZIONE ANOMALIA MEZZO</h2>", unsafe_allow_html=True)
     t_guasto = st.selectbox("UNITÀ", lista_mezzi)
     desc = st.text_area("COSA NON FUNZIONA?")
+    foto_guasto = st.camera_input("📸 FOTO DEL GUASTO (OPZIONALE)")
+    
     if st.button("INVIA ALL'OFFICINA"):
-        nuova_s = pd.DataFrame([{"Targa": t_guasto, "Data_Segnalazione": datetime.now().strftime("%d/%m/%Y"), "Descrizione": desc, "Urgenza": "ALTA", "Operatore": st.session_state.user, "Stato": "APERTO"}])
+        stringa_foto = process_image(foto_guasto)
+        nuova_s = pd.DataFrame([{
+            "Targa": t_guasto, "Data_Segnalazione": datetime.now().strftime("%d/%m/%Y"), 
+            "Descrizione": desc, "Urgenza": "ALTA", "Operatore": st.session_state.user, "Stato": "APERTO", "Foto": stringa_foto
+        }])
         df_s_v = carica_dati("Segnalazioni")
         conn.update(worksheet="Segnalazioni", data=pd.concat([df_s_v, nuova_s], ignore_index=True))
-        st.warning("NOTIFICATO"); st.session_state.pagina = "home"; st.rerun()
+        st.warning("NOTIFICATO CON FOTO"); st.session_state.pagina = "home"; st.rerun()
 
 # --- PAGINA ADMIN ---
 elif st.session_state.pagina == "admin":
     if st.button("⬅️ TORNA ALLA DASHBOARD"): st.session_state.pagina = "home"; st.rerun()
     if not st.session_state.is_admin:
         pw = st.text_input("PASSWORD ADMIN", type="password")
-        if st.button("AUTENTICA"):
+        if st.button("SBLOCCA"):
             if pw == "GSSA2026": st.session_state.is_admin = True; st.rerun()
     
     if st.session_state.is_admin:
         st.markdown("<h2>👑 COMANDO ADMIN</h2>", unsafe_allow_html=True)
         
-        # 1. AGGIUNTA NUOVA TARGA (RICHIESTA!)
-        with st.expander("🚛 AGGIUNGI NUOVO VEICOLO ALLA FLOTTA"):
-            nv = st.text_input("Inserisci Nuova Targa").upper().replace(" ", "")
-            if st.button("REGISTRA VEICOLO"):
-                if nv and nv not in lista_mezzi:
-                    nuova_r_t = pd.DataFrame([{"Targa": nv, "KM_Attuali": "0", "KM_Gomme": "0", "KM_prossime Gomme": "0", "KM_Tagliando": "0", "KM_prossimo Tagliando": "0", "Data": "-", "User": "-", "Altro": "-"}])
-                    conn.update(worksheet="Manutenzione", data=pd.concat([df_man, nuova_r_t], ignore_index=True))
-                    st.success(f"Veicolo {nv} aggiunto!"); st.rerun()
-                else: st.error("Targa già esistente o vuota.")
-
-        # 2. AGGIUNTA DRIVER
-        with st.expander("👤 AGGIUNGI NUOVO DRIVER"):
-            c_n1, c_n2 = st.columns(2)
-            n_nome = c_n1.text_input("Nome").upper()
-            n_cognome = c_n2.text_input("Cognome").upper()
-            if st.button("SALVA DRIVER"):
-                if n_nome and n_cognome:
-                    nuova_r = pd.DataFrame([{"Nome": n_nome, "Cognome": n_cognome}])
-                    conn.update(worksheet="AnagraficaDriver", data=pd.concat([df_drivers, nuova_r], ignore_index=True))
-                    st.success("DRIVER AGGIUNTO"); st.rerun()
+        # AGGIUNTA NUOVA TARGA & DRIVER (Espandibili)
+        col_add1, col_add2 = st.columns(2)
+        with col_add1:
+            with st.expander("🚛 AGGIUNGI VEICOLO"):
+                nv = st.text_input("Targa").upper().replace(" ", "")
+                if st.button("REGISTRA VEICOLO"):
+                    if nv and nv not in lista_mezzi:
+                        nuova_r_t = pd.DataFrame([{"Targa": nv, "KM_Attuali": "0", "KM_Gomme": "0", "KM_prossime Gomme": "0", "KM_Tagliando": "0", "KM_prossimo Tagliando": "0", "Data": "-", "User": "-", "Altro": "-"}])
+                        conn.update(worksheet="Manutenzione", data=pd.concat([df_man, nuova_r_t], ignore_index=True))
+                        st.rerun()
+        with col_add2:
+            with st.expander("👤 AGGIUNGI DRIVER"):
+                n_n = st.text_input("Nome").upper(); n_c = st.text_input("Cognome").upper()
+                if st.button("SALVA DRIVER"):
+                    if n_n and n_c:
+                        nuova_r = pd.DataFrame([{"Nome": n_n, "Cognome": n_c}])
+                        df_dr_v = carica_dati("AnagraficaDriver")
+                        conn.update(worksheet="AnagraficaDriver", data=pd.concat([df_dr_v, nuova_r], ignore_index=True))
+                        st.rerun()
 
         st.divider()
         
-        # 3. GUASTI MECCANICI
-        st.subheader("🛠️ GUASTI DA RIPARARE")
+        # VISUALIZZAZIONE DANNI E GUASTI CON FOTO
+        st.subheader("🛠️ INTERVENTI E DANNI PENDENTI")
         df_seg = carica_dati("Segnalazioni")
-        df_sto = carica_dati("Storico")
+        df_danni = carica_dati("DanniDriver")
+        
+        # Mostra Segnalazioni Meccaniche
         if not df_seg.empty:
             for i, r in df_seg[df_seg['Stato'] == 'APERTO'].iterrows():
-                st.markdown(f'<div class="guasto-card"><b>{r["Targa"]}</b>: {r["Descrizione"]}</div>', unsafe_allow_html=True)
-                if st.button(f"✅ RIPARATO: {r['Targa']}##{i}"):
-                    df_seg.at[i, 'Stato'] = 'CHIUSO'; conn.update(worksheet="Segnalazioni", data=df_seg)
-                    idx_m = df_man.index[df_man['Targa'] == r['Targa']].tolist()[0]
-                    nuovo_s = pd.DataFrame([{"Targa": r['Targa'], "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "KM_Attuali": df_man.at[idx_m, 'KM_Attuali'], "KM_prossimo_Tagliando": df_man.at[idx_m, 'KM_prossimo Tagliando'], "KM_prossime_Gomme": df_man.at[idx_m, 'KM_prossime Gomme'], "User": st.session_state.user, "Altro": f"RIPARAZIONE GUASTO: {r['Descrizione']}"}])
-                    conn.update(worksheet="Storico", data=pd.concat([df_sto, nuovo_s], ignore_index=True))
-                    st.rerun()
+                with st.container():
+                    st.markdown(f'<div class="guasto-card"><b>GUASTO MECCANICO: {r["Targa"]}</b><br>{r["Descrizione"]}</div>', unsafe_allow_html=True)
+                    if r["Foto"]:
+                        st.image(base64.b64decode(r["Foto"]), width=300)
+                    if st.button(f"CHIUDI GUASTO {r['Targa']}##{i}"):
+                        df_seg.at[i, 'Stato'] = 'CHIUSO'; conn.update(worksheet="Segnalazioni", data=df_seg); st.rerun()
 
-        st.divider()
-
-        # 4. DANNI DRIVER
-        st.subheader("💥 DANNI DRIVER")
-        df_danni = carica_dati("DanniDriver")
+        # Mostra Danni Driver
         if not df_danni.empty:
             for i, r in df_danni[df_danni['Stato'] == 'APERTO'].iterrows():
-                st.markdown(f'<div class="danno-card"><b>{r["Targa"]}</b> | Driver: <b>{r["Driver"]}</b><br>{r["Descrizione"]}</div>', unsafe_allow_html=True)
-                if st.button(f"📥 PRESO IN CARICO {r['Targa']}##{i}"):
-                    df_danni.at[i, 'Stato'] = 'CHIUSO'; conn.update(worksheet="DanniDriver", data=df_danni)
-                    st.rerun()
-
-        st.divider()
-
-        # 5. ARCHIVIO PDF
-        st.subheader("📋 ARCHIVIO REPORT")
-        t_search = st.selectbox("SCEGLI VEICOLO", lista_mezzi)
-        df_sto_view = df_sto[df_sto['Targa'] == t_search].sort_index(ascending=False)
-        for i, r in df_sto_view.iterrows():
-            st.download_button(f"📄 Report {r['Data']}", data=genera_pdf_storico(r), file_name=f"Log_{t_search}.pdf", key=f"pdf_{i}")
+                with st.container():
+                    st.markdown(f'<div class="danno-card"><b>DANNO DRIVER: {r["Targa"]}</b> | Driver: {r["Driver"]}<br>{r["Descrizione"]}</div>', unsafe_allow_html=True)
+                    if r["Foto"]:
+                        st.image(base64.b64decode(r["Foto"]), width=300)
+                    if st.button(f"PRENDI IN CARICO DANNO {r['Targa']}##{i}"):
+                        df_danni.at[i, 'Stato'] = 'PRESO IN CARICO'; conn.update(worksheet="DanniDriver", data=df_danni); st.rerun()
