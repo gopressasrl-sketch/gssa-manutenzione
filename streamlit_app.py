@@ -7,8 +7,8 @@ import PIL.Image
 from fpdf import FPDF
 import io
 
-# --- CONFIGURAZIONE PAGINA ---
-st.set_page_config(page_title="GSSA GESTIONE PRO 2026", layout="wide")
+# --- CONFIGURAZIONE ---
+st.set_page_config(page_title="GSSA GESTIONE PRO", layout="wide")
 
 # --- STILE CSS PREMIUM ---
 st.markdown("""
@@ -101,7 +101,7 @@ if menu == "🏠 Nuovo Intervento":
     if 'mostra_camera' not in st.session_state: st.session_state.mostra_camera = False
     
     if not st.session_state.mostra_camera:
-        if st.button("📷 SCANSIONA TARGA", use_container_width=True):
+        if st.button("📷 SCANSIONA TARGA VEICOLO", use_container_width=True):
             st.session_state.mostra_camera = True; st.rerun()
     else:
         foto = st.camera_input("Inquadra la targa")
@@ -113,12 +113,12 @@ if menu == "🏠 Nuovo Intervento":
                 st.session_state.mostra_camera = False; st.rerun()
             except:
                 st.session_state.mostra_camera = False; st.rerun()
-        if st.button("Chiudi Scanner"): st.session_state.mostra_camera = False; st.rerun()
+        if st.button("Annulla"): st.session_state.mostra_camera = False; st.rerun()
 
     lista_t = sorted(df_man['Targa'].unique()) if not df_man.empty else ["GG730AV"]
     t_init = st.session_state.get('targa_ocr', lista_t[0])
     if t_init not in lista_t: t_init = lista_t[0]
-    t_sel = st.selectbox("Seleziona Veicolo", lista_t, index=lista_t.index(t_init))
+    t_sel = st.selectbox("Veicolo Selezionato", lista_t, index=lista_t.index(t_init))
     
     # Alert Guasti Aperti
     guasti_aperti = df_seg[(df_seg['Targa'] == t_sel) & (df_seg['Stato'] == 'APERTO')]
@@ -148,7 +148,7 @@ if menu == "🏠 Nuovo Intervento":
             if st.checkbox(f"Ho riparato: {g['Descrizione']}", key=f"fix_{i}"):
                 lavori_chiusi.append(i)
 
-    altro = st.text_area("Note e lavori extra")
+    altro = st.text_area("Note aggiuntive")
 
     if st.button("💾 SALVA INTERVENTO", use_container_width=True, type="primary"):
         df_man.at[idx, 'KM_Attuali'] = str(km_att)
@@ -212,6 +212,8 @@ elif menu == "⚠️ Segnala Guasto":
 elif menu == "📋 Archivio & Admin":
     st.markdown("<h1>📋 Dashboard & Archivio</h1>", unsafe_allow_html=True)
     if st.text_input("Password Admin", type="password") == "GSSA2026":
+        # CARICHIAMO TUTTI I DATI NECESSARI
+        df_man = carica_dati("Manutenzione")
         df_seg = carica_dati("Segnalazioni")
         df_sto = carica_dati("Storico")
         
