@@ -13,6 +13,10 @@ st.set_page_config(page_title="GSSA GESTIONE PRO", layout="wide")
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
+# Inizializzazione stato fotocamera
+if 'mostra_camera' not in st.session_state:
+    st.session_state.mostra_camera = False
+
 # Intervalli Manutenzione
 KM_INTERVALLO_TAGLIANDO = 30000
 KM_INTERVALLO_GOMME = 40000
@@ -33,7 +37,6 @@ def carica_dati():
         df = conn.read(worksheet="Manutenzione", ttl=0)
         return df.astype(str)
     except:
-        # Se il foglio è nuovo, crea le colonne esatte come nella tua immagine
         cols = ["Targa", "KM_Attuali", "KM_Gomme", "KM_prossime Gomme", "KM_Tagliando", "KM_prossimo Tagliando", "Data", "User", "Link_Report", "Altro"]
         return pd.DataFrame(columns=cols)
 
@@ -79,22 +82,36 @@ df = carica_dati()
 if menu == "🏠 Inserimento":
     st.title("🛠 Nuovo Intervento")
     
-    # Scansione targa
-    foto = st.camera_input("📸 Scansiona Targa")
+    # GESTIONE FOTOCAMERA CON PULSANTE
     targa_ocr = None
-    if foto:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        res = model.generate_content(["Leggi la targa, scrivi solo quella.", PIL.Image.open(foto)])
-        targa_ocr = res.text.strip().upper().replace(" ", "")
+    
+    if not st.session_state.mostra_camera:
+        if st.button("📷 APRI FOTOCAMERA PER TARGA"):
+            st.session_state.mostra_camera = True
+            st.rerun()
+    else:
+        if st.button("❌ CHIUDI FOTOCAMERA"):
+            st.session_state.mostra_camera = False
+            st.rerun()
+            
+        foto = st.camera_input("Scatta una foto alla targa")
+        if foto:
+            with st.spinner("L'intelligenza artificiale sta leggendo la targa..."):
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                res = model.generate_content(["Leggi la targa, scrivi solo quella.", PIL.Image.open(foto)])
+                targa_ocr = res.text.strip().upper().replace(" ", "")
+                st.session_state.mostra_camera = False # Chiude la camera dopo lo scatto
+                st.success(f"Targa rilevata: {targa_ocr}")
 
+    # Selezione Targa
     targa_init = targa_ocr if targa_ocr in LISTA_TARGHE else LISTA_TARGHE[0]
-    targa_sel = st.selectbox("Veicolo", LISTA_TARGHE, index=LISTA_TARGHE.index(targa_init))
+    targa_sel = st.selectbox("Seleziona Veicolo", LISTA_TARGHE, index=LISTA_TARGHE.index(targa_init))
 
     if targa_sel in df['Targa'].values:
         idx = df.index[df['Targa'] == targa_sel].tolist()[0]
         
-        st.subheader("1. Inserisci KM Attuali")
-        km_att = st.number_input("Chilometri rilevati sul cruscotto:", value=safe_int(df.at[idx, 'KM_Attuali']), step=1)
+        st.subheader("1. Chilometri Attuali")
+        km_att = st.number_input("Inserisci i chilometri del cruscotto:", value=safe_int(df.at[idx, 'KM_Attuali']), step=1)
         
         st.divider()
         
@@ -102,21 +119,20 @@ if menu == "🏠 Inserimento":
         km_prossimo_t = km_att + KM_INTERVALLO_TAGLIANDO
         km_prossimo_g = km_att + KM_INTERVALLO_GOMME
         
-        st.subheader("2. Scadenze Automatiche")
+        st.subheader("2. Scadenze Suggerite")
         c1, c2 = st.columns(2)
         with c1: st.info(f"📅 **Prossimo Tagliando a:**\n{km_prossimo_t} km")
-        with c2: st.success(f"🛞 **Prossime Gomme a:**\n{km_prossimo_g} km")
+        with c2: st.success(f"🛞 **Prossime Gomme a:**\n{km_prossime_g if 'KM_prossime Gomme' in df.columns else km_prossimo_g} km")
 
         st.divider()
         
-        st.subheader("3. Cosa è stato fatto oggi?")
-        eseguito_tagliando = st.checkbox("Tagliando eseguito")
-        eseguite_gomme = st.checkbox("Cambio gomme eseguito")
+        st.subheader("3. Lavori eseguiti oggi")
+        eseguito_tagliando = st.checkbox("✅ Ho fatto il Tagliando oggi")
+        eseguite_gomme = st.checkbox("✅ Ho cambiato le Gomme oggi")
         
         altro = st.text_area("📝 Note / Altri lavori (freni, lampadine, ecc...)", value=df.at[idx, 'Altro'] if 'Altro' in df.columns else "")
 
         if st.button("💾 SALVA E GENERA REPORT", use_container_width=True, type="primary"):
-            # Aggiornamento dati nel DataFrame
             df.at[idx, 'KM_Attuali'] = str(km_att)
             if eseguito_tagliando:
                 df.at[idx, 'KM_Tagliando'] = str(km_att)
@@ -128,20 +144,17 @@ if menu == "🏠 Inserimento":
             df.at[idx, 'Altro'] = altro
             df.at[idx, 'Data'] = datetime.now().strftime("%d/%m/%Y")
             df.at[idx, 'User'] = st.session_state.user
-            df.at[idx, 'Link_Report'] = "Scaricato localmente"
+            df.at[idx, 'Link_Report'] = "Generato"
             
             conn.update(worksheet="Manutenzione", data=df)
-            st.success("✅ Database aggiornato con successo!")
+            st.success("✅ Database aggiornato!")
             
-            # Generazione PDF
             pdf_b = genera_pdf(targa_sel, km_att, km_prossimo_t, km_prossimo_g, altro, st.session_state.user)
-            st.download_button("📥 SCARICA PDF REPORT", data=pdf_b, file_name=f"Report_{targa_sel}.pdf", mime="application/pdf")
+            st.download_button("📥 SCARICA REPORT PDF", data=pdf_b, file_name=f"Report_{targa_sel}.pdf", mime="application/pdf")
             st.balloons()
 
 elif menu == "👑 Admin":
-    st.title("📊 Riepilogo Totale Flotta")
+    st.title("📊 Riepilogo Flotta")
     pw = st.text_input("Password Admin", type="password")
     if pw == "GSSA2026":
-        # Riordina le colonne per vederle bene come nel foglio
-        ordine_colonne = ["Targa", "KM_Attuali", "KM_Tagliando", "KM_prossimo Tagliando", "KM_Gomme", "KM_prossime Gomme", "Data", "User", "Link_Report", "Altro"]
-        st.dataframe(df[ordine_colonne], use_container_width=True, hide_index=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
