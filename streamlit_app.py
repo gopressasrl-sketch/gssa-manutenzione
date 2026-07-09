@@ -16,27 +16,30 @@ if 'show_cam' not in st.session_state: st.session_state.show_cam = False
 if 'foto_salvata' not in st.session_state: st.session_state.foto_salvata = None
 if 'is_admin' not in st.session_state: st.session_state.is_admin = True 
 
-# --- SUPER CSS PER CANCELLARE TUTTO IL CARICAMENTO (RUNNING...) ---
+# --- CSS DEFINITIVO PER PULIZIA TOTALE ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@300;500;700&display=swap');
     
-    /* 1. NASCONDE TOTALMENTE LA BARRA "RUNNING..." E IL CERCHIETTO */
-    [data-testid="stStatusWidget"], .stStatusWidget, div[id="stStatusWidget"] {
-        display: none !important;
+    /* 1. CANCELLA OGNI TRACCIA DI CARICAMENTO E BADGE STREAMLIT */
+    #MainMenu, header, footer, .stDeployButton, [data-testid="stStatusWidget"], .stStatusWidget {
         visibility: hidden !important;
+        display: none !important;
     }
     
-    /* Rimuove lo spinner e la corona di Streamlit Cloud */
-    #MainMenu, header, footer, .stDeployButton {
+    /* Rimuove forzatamente il badge "Manage App" (Corona) */
+    div[class^="viewerBadge_container"], 
+    div[class*="viewerBadge"], 
+    .viewerBadge_container__1QSob,
+    button[title="Manage app"] {
         display: none !important;
         visibility: hidden !important;
-    }
-    
-    .viewerBadge_container__1QSob, .viewerBadge_link__1QSob, div[class^="viewerBadge"] {
-        display: none !important;
     }
 
+    /* Rimuove la barra di caricamento in alto */
+    div[data-testid="stDecoration"] { display: none !important; }
+    
+    /* Rimuove i bordi dei bottoni di sistema */
     div[data-testid="stToolbar"] { display: none !important; }
 
     /* 2. DESIGN DEEP SPACE */
@@ -152,7 +155,7 @@ if st.session_state.pagina == "home":
         if st.button("👑 ADMIN"): st.session_state.pagina = "admin"; st.rerun()
     if st.button("🚪 LOGOUT"): st.session_state.clear(); st.rerun()
 
-# --- MANUTENZIONE ---
+# --- PAGINA MANUTENZIONE ---
 elif st.session_state.pagina == "manutenzione":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
     st.markdown("<h2>🛠 REGISTRO MANUTENZIONE</h2>", unsafe_allow_html=True)
@@ -178,9 +181,10 @@ elif st.session_state.pagina == "manutenzione":
         conn.update(worksheet="Storico", data=pd.concat([df_sto_v, nuovo_s], ignore_index=True))
         st.success("OK"); st.session_state.pagina = "home"; st.rerun()
 
-# --- SEGNALA DANNO ---
+# --- PAGINA SEGNALA DANNO ---
 elif st.session_state.pagina == "danno":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
+    st.markdown("<h2>💥 SEGNALA DANNO DRIVER</h2>", unsafe_allow_html=True)
     d_sel = st.selectbox("DRIVER", lista_drivers)
     t_sel = st.selectbox("VEICOLO", lista_mezzi)
     desc = st.text_area("DESCRIZIONE DANNO")
@@ -191,6 +195,7 @@ elif st.session_state.pagina == "danno":
         if cam_foto:
             st.session_state.foto_salvata = process_image(cam_foto)
             st.session_state.show_cam = False; st.rerun()
+        if st.button("CHIUDI"): st.session_state.show_cam = False; st.rerun()
     if st.session_state.foto_salvata:
         st.image(base64.b64decode(st.session_state.foto_salvata), width=200)
     if st.button("🚀 INVIA REPORT"):
@@ -199,29 +204,24 @@ elif st.session_state.pagina == "danno":
         conn.update(worksheet="DanniDriver", data=pd.concat([df_d_v, nuovo_d], ignore_index=True))
         reset_camera(); st.session_state.pagina = "home"; st.rerun()
 
-# --- SEGNALA GUASTO (CON OPZIONI SPECIFICHE) ---
+# --- PAGINA SEGNALA GUASTO ---
 elif st.session_state.pagina == "guasto":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
     st.markdown("<h2>🚨 ANOMALIA MEZZO</h2>", unsafe_allow_html=True)
     t_guasto = st.selectbox("UNITÀ", lista_mezzi)
-    
     st.write("Seleziona i problemi riscontrati:")
     p1 = st.checkbox("Cambio Gomme Anteriore")
     p2 = st.checkbox("Cambio gomme Posteriore")
     p3 = st.checkbox("Pastiglie dei freni")
     p4 = st.checkbox("Tagliando")
     p5 = st.checkbox("Spia motore")
-    
-    desc_extra = st.text_area("Altre note o dettagli:")
-    
-    # Costruzione stringa problemi
+    desc_extra = st.text_area("Altre note:")
     problemi = []
     if p1: problemi.append("Cambio Gomme Anteriore")
     if p2: problemi.append("Cambio gomme Posteriore")
     if p3: problemi.append("Pastiglie dei freni")
     if p4: problemi.append("Tagliando")
     if p5: problemi.append("Spia motore")
-    
     desc_finale = ", ".join(problemi)
     if desc_extra: desc_finale += " | Note: " + desc_extra
 
@@ -234,7 +234,6 @@ elif st.session_state.pagina == "guasto":
             st.session_state.show_cam = False; st.rerun()
     if st.session_state.foto_salvata:
         st.image(base64.b64decode(st.session_state.foto_salvata), width=200)
-        
     if st.button("🚀 INVIA ALL'OFFICINA"):
         nuova_s = pd.DataFrame([{"Targa": t_guasto, "Data_Segnalazione": datetime.now().strftime("%d/%m/%Y"), "Descrizione": desc_finale, "Urgenza": "ALTA", "Operatore": st.session_state.user, "Stato": "APERTO", "Foto": st.session_state.foto_salvata or ""}])
         df_s_v = carica_dati("Segnalazioni")
