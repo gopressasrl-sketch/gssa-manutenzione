@@ -6,3 +6,9 @@ Pillow
 fpdf
 google-api-python-client
 google-auth
+streamlit
+st-gsheets-connection
+pandas
+Pillow
+fpdf
+pytz
