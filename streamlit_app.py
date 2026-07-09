@@ -101,7 +101,7 @@ def invia_email_ufficiale(destinatario, targa, km, tipo_guasto, foto_list):
 UTENTI = {
     "ION PLUGARU": "1",
     "GURJIT SINGH": "2",
-    "FILIPPO BERNARDINI": "3"
+    "FILIPPO BERNARDI": "3"
 }
 
 if not st.session_state.user:
