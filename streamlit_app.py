@@ -54,17 +54,13 @@ def carica_dati(foglio):
     try:
         df = conn.read(worksheet=foglio, ttl=0).fillna("").astype(str)
         df.columns = [c.strip() for c in df.columns]
-        if foglio == "Segnalazioni":
-            cols = ["Targa", "KM_Segnalazione", "Data_Segnalazione", "Descrizione", "Urgenza", "Operatore", "Stato", "Foto", "Foto_Gomme", "Foto_Cruscotto", "Foto_KM", "Foto_Targa", "Foto_Libretto"]
-            for c in cols:
-                if c not in df.columns: df[c] = ""
         return df
     except: return pd.DataFrame()
 
 def process_image(uploaded_file):
     if uploaded_file is None: return ""
     img = Image.open(uploaded_file)
-    img.thumbnail((1280, 1280)) # ALTA QUALITÀ
+    img.thumbnail((1280, 1280)) 
     buffered = io.BytesIO()
     img.save(buffered, format="JPEG", quality=85)
     return base64.b64encode(buffered.getvalue()).decode()
@@ -85,21 +81,7 @@ def invia_email_ufficiale(destinatario, targa, km, tipo_guasto, foto_list):
         msg = MIMEMultipart()
         msg['From'] = cfg["smtp_user"]; msg['To'] = destinatario
         msg['Subject'] = f"Richiesta Autorizzazione Intervento - {targa}"
-        corpo = f"""Buongiorno,
-
-vi scrivo in riferimento al veicolo a noleggio targato {targa} - KM {km}.
-Avrei necessità di procedere con {tipo_guasto}.
-
-Disponiamo di una carrozzeria convenzionata con noi, la Aldo Dal Maso & C. Snc, sita in Via Badia 7, 36043 Camisano Vicentino (VI), vicino alla stazione Amazon, che sarebbe disponibile a eseguire i lavori in tempi brevi.
-
-Vi chiedo gentilmente se per Voi non ci sono problemi ad autorizzare questi interventi. Qualora ci confermaste la vostra approvazione, procederemmo immediatamente.
-
-In allegato le foto del veicolo.
-
-Resto in attesa di un Vostro gentile riscontro.
-
-Cordiali saluti,
-Gopressa SRL"""
+        corpo = f"Buongiorno,\n\nvi scrivo in riferimento al veicolo a noleggio targato {targa} - KM {km}.\nAvrei necessità di procedere con {tipo_guasto}.\n\nDisponiamo di una carrozzeria convenzionata con noi, la Aldo Dal Maso & C. Snc, sita in Via Badia 7, 36043 Camisano Vicentino (VI), vicino alla stazione Amazon.\n\nVi chiedo gentilmente l'autorizzazione.\n\nCordiali saluti,\nGopressa SRL"
         msg.attach(MIMEText(corpo, 'plain'))
         for label, b64_str in foto_list.items():
             if b64_str:
@@ -115,23 +97,38 @@ Gopressa SRL"""
     except Exception as e:
         st.error(f"Errore mail: {e}"); return False
 
-# --- 5. HEADER FISSO ---
-if st.session_state.user:
-    st.markdown(f'<div class="header-container"><h1 class="main-title">GOPRESSA</h1><p>UNIT: {st.session_state.user}</p></div>', unsafe_allow_html=True)
-else:
-    st.markdown('<div class="header-container"><h1 class="main-title">GOPRESSA</h1></div>', unsafe_allow_html=True)
+# --- 5. LOGIN SYSTEM ---
+UTENTI = {
+    "ION PLUGARU": "1",
+    "GURJIT SINGH": "2",
+    "FILIPPO BERNARDINI": "3"
+}
 
-df_man = carica_dati("Manutenzione")
-lista_mezzi = sorted(df_man['Targa'].unique().tolist()) if not df_man.empty else TARGHE_BACKUP
-
-# --- 6. LOGIN ---
 if not st.session_state.user:
-    nome_input = st.text_input("IDENTIFICAZIONE OPERATORE")
-    if st.button("ACCEDI"):
-        if nome_input: st.session_state.user = nome_input.upper(); st.rerun()
+    st.markdown('<div class="header-container"><h1 class="main-title">GOPRESSA</h1><p>IDENTIFICAZIONE MISSIONE</p></div>', unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        u_sel = st.selectbox("SELEZIONA OPERATORE", [""] + list(UTENTI.keys()))
+        p_input = st.text_input("PASSWORD DI ACCESSO", type="password")
+        if st.button("SBLOCCA PORTALE"):
+            if u_sel != "" and p_input == UTENTI[u_sel]:
+                st.session_state.user = u_sel
+                st.rerun()
+            else:
+                st.error("Credenziali non valide.")
     st.stop()
 
-# --- 7. NAVIGAZIONE ---
+# --- 6. HEADER E DATI ---
+st.markdown(f'<div class="header-container"><h1 class="main-title">GOPRESSA</h1><p>OPERATORE: {st.session_state.user}</p></div>', unsafe_allow_html=True)
+df_man = carica_dati("Manutenzione")
+df_drivers = carica_dati("AnagraficaDriver")
+df_rubrica = carica_dati("RubricaEmail")
+lista_mezzi = sorted(df_man['Targa'].unique().tolist()) if not df_man.empty else TARGHE_BACKUP
+rubrica_dict = {"SIXT VERONA": "dt48721@sixt.com", "SIXT MESTRE": "dt48302@sixt.com"}
+for _, r in df_rubrica.iterrows(): rubrica_dict[r['Nome']] = r['Email']
+lista_contatti = sorted(list(rubrica_dict.keys()))
+
+# --- 7. NAVIGAZIONE HOME ---
 if st.session_state.pagina == "home":
     st.session_state.gallery = {}; st.session_state.foto_salvata = None; st.session_state.show_cam = False
     col1, col2, col3, col4 = st.columns(4)
@@ -163,11 +160,9 @@ elif st.session_state.pagina == "manutenzione":
 
 elif st.session_state.pagina == "guasto":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
-    t_guasto = st.selectbox("UNITÀ IN PANNE", lista_mezzi)
+    t_guasto = st.selectbox("UNITÀ", lista_mezzi)
     km_guasto = st.number_input("📟 KM ATTUALI:", value=0)
     p1=st.checkbox("Cambio Gomme Ant"); p2=st.checkbox("Cambio Gomme Post"); p3=st.checkbox("Pastiglie Freni"); p4=st.checkbox("Tagliando"); p5=st.checkbox("Spia motore")
-    
-    # RIGA AGGIUNTA PER ALTRI DANNI
     note_extra = st.text_area("🗒️ ALTRI DANNI O NOTE:")
     
     st.markdown("### 📸 SET FOTOGRAFICO")
@@ -176,9 +171,12 @@ elif st.session_state.pagina == "guasto":
         if k not in st.session_state.gallery:
             if st.button(f"📷 SCATTA {v}"): st.session_state.show_cam=True; st.session_state.foto_tipo=k; st.rerun()
         else: st.success(f"✅ {v} OK")
+    
     if st.session_state.show_cam:
-        fi = st.camera_input("SCATTA")
+        if st.button("❌ CHIUDI FOTOCAMERA"): st.session_state.show_cam=False; st.rerun()
+        fi = st.camera_input("SCATTA ORA")
         if fi: st.session_state.gallery[st.session_state.foto_tipo] = process_image(fi); st.session_state.show_cam=False; st.rerun()
+
     if st.button("🚀 INVIA REPORT"):
         sel = [k for k,v in {"Gomme Ant":p1,"Gomme Post":p2,"Freni":p3,"Tagliando":p4,"Spia":p5}.items() if v]
         desc_completa = ", ".join(sel) + (" | " + note_extra if note_extra else "")
@@ -193,22 +191,23 @@ elif st.session_state.pagina == "danno":
     if not st.session_state.show_cam:
         if st.button("📷 SCATTA FOTO"): st.session_state.show_cam=True; st.rerun()
     else:
-        fi = st.camera_input("SCATTA")
+        if st.button("❌ CHIUDI FOTOCAMERA"): st.session_state.show_cam=False; st.rerun()
+        fi = st.camera_input("SCATTA ORA")
         if fi: st.session_state.foto_salvata = process_image(fi); st.session_state.show_cam=False; st.rerun()
+    if st.session_state.foto_salvata: st.image(base64.b64decode(st.session_state.foto_salvata), width=200)
     if st.button("🚀 INVIA"):
         nuovo_d = pd.DataFrame([{"Driver": d_sel, "Targa": t_sel, "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "Descrizione": desc, "Stato": "APERTO", "Operatore": st.session_state.user, "Foto": st.session_state.foto_salvata or ""}])
         conn.update(worksheet="DanniDriver", data=pd.concat([carica_dati("DanniDriver"), nuovo_d], ignore_index=True)); st.session_state.pagina = "home"; st.rerun()
 
 elif st.session_state.pagina == "admin":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
-    st.markdown("### ➕ AGGIUNTA DATI")
     c1, c2, c3 = st.columns(3)
     with c1:
         with st.expander("🚛 VEICOLO"):
             nv = st.text_input("Targa").upper()
             if st.button("SALVA MEZZO"):
                 nr = pd.DataFrame([{"Targa":nv,"KM_Attuali":"0","KM_Gomme":"0","KM_prossime Gomme":"0","KM_Tagliando":"0","KM_prossimo Tagliando":"0","Data":"-","User":"-"}])
-                conn.update(worksheet="Manutenzione", data=pd.concat([carica_dati("Manutenzione"), nr], ignore_index=True)); st.rerun()
+                conn.update(worksheet="Manutenzione", data=pd.concat([df_man, nr], ignore_index=True)); st.rerun()
     with c2:
         with st.expander("👤 DRIVER"):
             nn = st.text_input("Nome").upper(); nc = st.text_input("Cognome").upper()
@@ -220,29 +219,21 @@ elif st.session_state.pagina == "admin":
             if st.button("SALVA EMAIL"):
                 nr = pd.DataFrame([{"Nome":en, "Email":ee}]); conn.update(worksheet="RubricaEmail", data=pd.concat([carica_dati("RubricaEmail"), nr], ignore_index=True)); st.rerun()
 
-    st.divider(); df_seg = carica_dati("Segnalazioni")
-    df_rub = carica_dati("RubricaEmail")
-    rd = {"SIXT VERONA": "dt48721@sixt.com", "SIXT MESTRE": "dt48302@sixt.com"}
-    for _,r in df_rub.iterrows(): rd[r['Nome']] = r['Email']
-    lc = sorted(list(rd.keys()))
-
-    if not df_seg.empty and 'Stato' in df_seg.columns:
-        for targa in df_seg[df_seg['Stato'] == 'APERTO']['Targa'].unique():
-            with st.expander(f"🚛 PANNE: {targa}", expanded=True):
-                dg = df_seg[(df_seg['Targa'] == targa) & (df_seg['Stato'] == 'APERTO')].iloc[0]
-                st.write(f"Guasto: {dg['Descrizione']} | KM: {dg['KM_Segnalazione']}")
-                c = st.columns(6); fl = ["Gen", "Gomme", "Spia", "KM", "Targa", "Lib"]; fc = ["Foto", "Foto_Gomme", "Foto_Cruscotto", "Foto_KM", "Foto_Targa", "Foto_Libretto"]
-                for i, lab in enumerate(fl):
-                    if dg.get(fc[i], ""): c[i].image(base64.b64decode(dg[fc[i]]), caption=lab)
-                sel_m = st.selectbox("Invia a:", lc, key=f"s_{targa}")
-                if st.button(f"📧 INVIA MAIL {targa}"):
-                    fa = {fl[i]: dg.get(fc[i], "") for i in range(6)}
-                    if invia_email_ufficiale(rd[sel_m], targa, dg['KM_Segnalazione'], dg['Descrizione'], fa): st.success("OK")
-                if st.button(f"✅ CHIUDI {targa}"):
-                    df_seg.loc[df_seg['Targa'] == targa, 'Stato'] = 'CHIUSO'; conn.update(worksheet="Segnalazioni", data=df_seg); st.rerun()
-
-    st.divider(); df_sto = carica_dati("Storico")
-    t_s = st.selectbox("STORICO PDF", lista_mezzi)
+    st.divider(); df_seg = carica_dati("Segnalazioni"); df_sto = carica_dati("Storico")
+    for targa in df_seg[df_seg['Stato'] == 'APERTO']['Targa'].unique():
+        with st.expander(f"🚛 PANNE: {targa}", expanded=True):
+            dg = df_seg[(df_seg['Targa'] == targa) & (df_seg['Stato'] == 'APERTO')].iloc[0]
+            st.write(f"Guasto: {dg['Descrizione']} | KM: {dg['KM_Segnalazione']}")
+            c = st.columns(6); fl = ["Gen", "Gomme", "Spia", "KM", "Targa", "Lib"]; fc = ["Foto", "Foto_Gomme", "Foto_Cruscotto", "Foto_KM", "Foto_Targa", "Foto_Libretto"]
+            for i, lab in enumerate(fl):
+                if dg.get(fc[i], ""): c[i].image(base64.b64decode(dg[fc[i]]), caption=lab)
+            sel_m = st.selectbox("Invia a:", lista_contatti, key=f"s_{targa}")
+            if st.button(f"📧 INVIA MAIL {targa}"):
+                fa = {fl[i]: dg.get(fc[i], "") for i in range(6)}
+                if invia_email_ufficiale(rubrica_dict[sel_m], targa, dg['KM_Segnalazione'], dg['Descrizione'], fa): st.success("OK")
+            if st.button(f"✅ CHIUDI GUASTO {targa}"):
+                df_seg.loc[df_seg['Targa'] == targa, 'Stato'] = 'CHIUSO'; conn.update(worksheet="Segnalazioni", data=df_seg); st.rerun()
+    st.divider(); t_s = st.selectbox("STORICO PDF", lista_mezzi)
     if not df_sto.empty and 'Targa' in df_sto.columns:
         for i, r in df_sto[df_sto['Targa'] == t_s].sort_index(ascending=False).iterrows():
             st.download_button(f"📄 Report {r['Data']}", data=genera_pdf_storico(r), file_name=f"Report.pdf", key=f"p_{i}")
