@@ -16,24 +16,25 @@ if 'show_cam' not in st.session_state: st.session_state.show_cam = False
 if 'foto_salvata' not in st.session_state: st.session_state.foto_salvata = None
 if 'is_admin' not in st.session_state: st.session_state.is_admin = True 
 
-# --- SUPER CSS PER CANCELLARE TUTTO (CORONA E CARICAMENTO) ---
+# --- STILE CSS EXTREME (CANCELLA TUTTE LE ICONE STREAMLIT) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@300;500;700&display=swap');
     
-    /* 1. BLOCCO TOTALE ELEMENTI STREAMLIT CLOUD (CORONA E SPINNER) */
-    #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
-    [data-testid="stStatusWidget"] {display: none !important; visibility: hidden !important;}
-    .stDeployButton {display: none !important;}
+    /* 1. CANCELLA DEFINITIVAMENTE CORONA, CERCHIETTO BLU E BARRE STRANE */
+    #MainMenu, header, footer, [data-testid="stStatusWidget"], .stDeployButton {
+        display: none !important;
+        visibility: hidden !important;
+    }
     
-    /* CANCELLA IL TASTO "MANAGE APP" (LA CORONA ROSSA) E IL BADGE */
-    div[class^="viewerBadge_container"], div[class*="viewerBadge"] {display: none !important;}
-    .viewerBadge_container__1QSob {display: none !important;}
-    a[href*="streamlit.io"] {display: none !important;}
-    iframe[title="Manage app"] {display: none !important;}
-    
+    /* Badge "Manage App" Streamlit Cloud */
+    .viewerBadge_container__1QSob, .viewerBadge_link__1QSob, div[class^="viewerBadge"] {
+        display: none !important;
+    }
+
+    /* Rimuove toolbar in alto a destra */
+    div[data-testid="stToolbar"] { display: none !important; }
+
     /* 2. DESIGN DEEP SPACE */
     .stApp {
         background: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #0f172a 50%, #020617 100%);
@@ -100,11 +101,11 @@ def genera_pdf_storico(row):
     pdf.cell(0, 8, f"Data: {row['Data']}", ln=True)
     pdf.cell(0, 8, f"Mezzo: {row['Targa']} | Operatore: {row['User']}", ln=True)
     pdf.ln(10); pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, f"KM REGISTRATI: {row['KM_Attuali']} km", ln=True)
-    pdf.cell(0, 10, f"PROSSIMO TAGLIANDO: {row['KM_prossimo_Tagliando']} km", ln=True)
-    pdf.cell(0, 10, f"PROSSIME GOMME: {row['KM_prossime_Gomme']} km", ln=True)
+    pdf.cell(0, 8, f"KM REGISTRATI: {row['KM_Attuali']} km", ln=True)
+    pdf.cell(0, 8, f"PROSSIMO TAGLIANDO: {row['KM_prossimo_Tagliando']} km", ln=True)
+    pdf.cell(0, 8, f"PROSSIME GOMME: {row['KM_prossime_Gomme']} km", ln=True)
     pdf.ln(10); pdf.set_font("Arial", "", 11)
-    pdf.multi_cell(0, 8, f"Note: {row['Altro']}")
+    pdf.multi_cell(0, 8, f"Note salvate: {row['Altro']}")
     return pdf.output(dest='S').encode('latin-1')
 
 def reset_camera():
@@ -122,6 +123,7 @@ if 'user' not in st.session_state:
 # --- HEADER FISSO ---
 st.markdown(f'<div class="header-container"><h1 class="main-title">GOPRESSA</h1><p>UNIT: {st.session_state.user}</p></div>', unsafe_allow_html=True)
 
+# CARICAMENTO DATI
 df_man = carica_dati("Manutenzione")
 df_drivers = carica_dati("AnagraficaDriver")
 lista_mezzi = sorted(df_man['Targa'].unique().tolist()) if not df_man.empty else []
@@ -132,7 +134,7 @@ if not df_drivers.empty and 'Nome' in df_drivers.columns:
 else:
     lista_drivers = ["NESSUN DRIVER REGISTRATO"]
 
-# --- NAVIGAZIONE ---
+# --- NAVIGAZIONE HOME ---
 if st.session_state.pagina == "home":
     reset_camera()
     col1, col2, col3, col4 = st.columns(4)
@@ -146,8 +148,10 @@ if st.session_state.pagina == "home":
         if st.button("👑 ADMIN"): st.session_state.pagina = "admin"; st.rerun()
     if st.button("🚪 LOGOUT"): st.session_state.clear(); st.rerun()
 
+# --- MANUTENZIONE ---
 elif st.session_state.pagina == "manutenzione":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
+    st.markdown("<h2>🛠 REGISTRO MANUTENZIONE</h2>", unsafe_allow_html=True)
     t_sel = st.selectbox("🚛 SELEZIONA MEZZO", lista_mezzi)
     idx = df_man.index[df_man['Targa'] == t_sel].tolist()[0]
     km_att = st.number_input("📟 KM ATTUALI", value=safe_int(df_man.at[idx, 'KM_Attuali']))
@@ -170,8 +174,10 @@ elif st.session_state.pagina == "manutenzione":
         conn.update(worksheet="Storico", data=pd.concat([df_sto_v, nuovo_s], ignore_index=True))
         st.success("OK"); st.session_state.pagina = "home"; st.rerun()
 
+# --- SEGNALA DANNO ---
 elif st.session_state.pagina == "danno":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
+    st.markdown("<h2>💥 SEGNALA DANNO DRIVER</h2>", unsafe_allow_html=True)
     d_sel = st.selectbox("DRIVER", lista_drivers)
     t_sel = st.selectbox("VEICOLO", lista_mezzi)
     desc = st.text_area("DESCRIZIONE DANNO")
@@ -182,6 +188,7 @@ elif st.session_state.pagina == "danno":
         if cam_foto:
             st.session_state.foto_salvata = process_image(cam_foto)
             st.session_state.show_cam = False; st.rerun()
+        if st.button("CHIUDI"): st.session_state.show_cam = False; st.rerun()
     if st.session_state.foto_salvata:
         st.image(base64.b64decode(st.session_state.foto_salvata), width=200)
     if st.button("🚀 INVIA REPORT"):
@@ -190,10 +197,34 @@ elif st.session_state.pagina == "danno":
         conn.update(worksheet="DanniDriver", data=pd.concat([df_d_v, nuovo_d], ignore_index=True))
         reset_camera(); st.session_state.pagina = "home"; st.rerun()
 
+# --- SEGNALA GUASTO (CON OPZIONI RICHIESTE) ---
 elif st.session_state.pagina == "guasto":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
+    st.markdown("<h2>🚨 ANOMALIA MEZZO</h2>", unsafe_allow_html=True)
     t_guasto = st.selectbox("UNITÀ", lista_mezzi)
-    desc = st.text_area("COSA NON FUNZIONA?")
+    
+    # OPZIONI RICHIESTE
+    st.write("Seleziona i problemi riscontrati:")
+    p1 = st.checkbox("Cambio Gomme Anteriore")
+    p2 = st.checkbox("Cambio gomme Posteriore")
+    p3 = st.checkbox("Pastiglie dei freni")
+    p4 = st.checkbox("Tagliando")
+    p5 = st.checkbox("Spia motore")
+    
+    desc_extra = st.text_area("Altre note o dettagli:")
+    
+    # Unione dei problemi selezionati
+    problemi = []
+    if p1: problemi.append("Cambio Gomme Anteriore")
+    if p2: problemi.append("Cambio gomme Posteriore")
+    if p3: problemi.append("Pastiglie dei freni")
+    if p4: problemi.append("Tagliando")
+    if p5: problemi.append("Spia motore")
+    
+    desc_finale = ", ".join(problemi)
+    if desc_extra:
+        desc_finale += " | Note: " + desc_extra
+
     if not st.session_state.show_cam:
         if st.button("📷 APRI FOTOCAMERA"): st.session_state.show_cam = True; st.rerun()
     else:
@@ -201,20 +232,23 @@ elif st.session_state.pagina == "guasto":
         if cam_foto:
             st.session_state.foto_salvata = process_image(cam_foto)
             st.session_state.show_cam = False; st.rerun()
+    
     if st.session_state.foto_salvata:
         st.image(base64.b64decode(st.session_state.foto_salvata), width=200)
+        
     if st.button("🚀 INVIA ALL'OFFICINA"):
-        nuova_s = pd.DataFrame([{"Targa": t_guasto, "Data_Segnalazione": datetime.now().strftime("%d/%m/%Y"), "Descrizione": desc, "Urgenza": "ALTA", "Operatore": st.session_state.user, "Stato": "APERTO", "Foto": st.session_state.foto_salvata or ""}])
+        nuova_s = pd.DataFrame([{"Targa": t_guasto, "Data_Segnalazione": datetime.now().strftime("%d/%m/%Y"), "Descrizione": desc_finale, "Urgenza": "ALTA", "Operatore": st.session_state.user, "Stato": "APERTO", "Foto": st.session_state.foto_salvata or ""}])
         df_s_v = carica_dati("Segnalazioni")
         conn.update(worksheet="Segnalazioni", data=pd.concat([df_s_v, nuova_s], ignore_index=True))
         reset_camera(); st.session_state.pagina = "home"; st.rerun()
 
+# --- ADMIN ---
 elif st.session_state.pagina == "admin":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
     col_add1, col_add2 = st.columns(2)
     with col_add1:
         with st.expander("🚛 AGGIUNGI VEICOLO"):
-            nv = st.text_input("Targa").upper()
+            nv = st.text_input("Targa").upper().replace(" ", "")
             if st.button("REGISTRA VEICOLO"):
                 nuova_r_t = pd.DataFrame([{"Targa": nv, "KM_Attuali": "0", "KM_Gomme": "0", "KM_prossime Gomme": "0", "KM_Tagliando": "0", "KM_prossimo Tagliando": "0", "Data": "-", "User": "-", "Altro": "-"}])
                 conn.update(worksheet="Manutenzione", data=pd.concat([df_man, nuova_r_t], ignore_index=True)); st.rerun()
