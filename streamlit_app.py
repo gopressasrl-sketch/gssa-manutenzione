@@ -15,103 +15,32 @@ from email import encoders
 # --- 1. CONFIGURAZIONE SISTEMA ---
 st.set_page_config(page_title="GOPRESSA PRO MAX", layout="wide", initial_sidebar_state="collapsed")
 
-# Inizializzazione variabili
-keys_to_init = ['pagina', 'show_cam', 'foto_tipo', 'is_admin', 'user', 'foto_salvata', 'gallery']
-for key in keys_to_init:
-    if key not in st.session_state:
-        if key == 'pagina': st.session_state[key] = "home"
-        elif key == 'is_admin': st.session_state[key] = True
-        elif key == 'gallery': st.session_state[key] = {}
-        else: st.session_state[key] = None
+if 'pagina' not in st.session_state: st.session_state.pagina = "home"
+if 'show_cam' not in st.session_state: st.session_state.show_cam = False
+if 'foto_tipo' not in st.session_state: st.session_state.foto_tipo = None
+if 'is_admin' not in st.session_state: st.session_state.is_admin = True
+if 'user' not in st.session_state: st.session_state.user = None
+if 'gallery' not in st.session_state: st.session_state.gallery = {}
+if 'foto_salvata' not in st.session_state: st.session_state.foto_salvata = None
 
-# --- 2. DESIGN IPHONE 17 PRO MAX (TITANIUM GLASS) ---
+# --- 2. DESIGN IPHONE 17 PRO MAX ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
-    
-    /* PULIZIA TOTALE STREAMLIT */
     [data-testid="stStatusWidget"], .stStatusWidget, div[id="stStatusWidget"], .stDeployButton, 
     header, footer, #MainMenu, div[data-testid="stDecoration"], .viewerBadge_container__1QSob, 
     .viewerBadge_link__1QSob, div[class^="viewerBadge"], div[data-testid="stToolbar"] { 
         display: none !important; visibility: hidden !important; 
     }
-
-    /* SFONDO OLED BLACK & TITANIUM */
-    .stApp {
-        background: linear-gradient(180deg, #000000 0%, #1c1c1e 100%);
-        color: #ffffff;
-        font-family: 'Inter', -apple-system, sans-serif;
-    }
-
-    /* CONTENITORE PRINCIPALE TIPO IPHONE */
-    .header-container {
-        text-align: center;
-        padding: 40px 20px;
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(20px);
-        border-radius: 40px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        margin: 10px auto 30px auto;
-        max-width: 800px;
-    }
-
-    /* TITOLO PREMIUM */
-    .main-title {
-        font-size: 3.5em !important;
-        font-weight: 800;
-        letter-spacing: -2px;
-        background: linear-gradient(180deg, #ffffff 0%, #a2a2a2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 0;
-    }
-
-    /* CARD STILE IOS */
-    .stButton>button {
-        background: rgba(255, 255, 255, 0.08) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 25px !important;
-        padding: 20px !important;
-        font-size: 1.1em !important;
-        font-weight: 600 !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
-    }
-
-    .stButton>button:hover {
-        background: #ffffff !important;
-        color: #000000 !important;
-        transform: scale(0.98);
-    }
-
-    /* BOX SCADENZE IPHONE */
-    .status-card {
-        padding: 25px;
-        border-radius: 30px;
-        text-align: center;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-    }
-    
-    .val-neon {
-        font-size: 32px;
-        font-weight: 700;
-        color: #ffffff;
-    }
-
-    /* GUASTI & DANNI CARD */
+    .stApp { background: linear-gradient(180deg, #000000 0%, #1c1c1e 100%); color: #ffffff; font-family: 'Inter', sans-serif; }
+    .header-container { text-align: center; padding: 40px 20px; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border-radius: 40px; border: 1px solid rgba(255, 255, 255, 0.1); margin: 10px auto 30px auto; max-width: 800px; }
+    .main-title { font-size: 3.5em !important; font-weight: 800; letter-spacing: -2px; background: linear-gradient(180deg, #ffffff 0%, #a2a2a2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; }
+    .stButton>button { background: rgba(255, 255, 255, 0.08) !important; color: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 25px !important; padding: 20px !important; font-size: 1.1em !important; font-weight: 600; width: 100%; transition: 0.3s; }
+    .stButton>button:hover { background: #ffffff !important; color: #000000 !important; }
+    .status-card { padding: 25px; border-radius: 30px; text-align: center; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+    .val-neon { font-size: 32px; font-weight: 700; color: #ffffff; }
     .guasto-card { background: rgba(10, 132, 255, 0.15); border: 1px solid #0a84ff; padding: 20px; border-radius: 30px; margin-bottom: 15px; }
     .danno-card { background: rgba(255, 69, 58, 0.15); border: 1px solid #ff453a; padding: 20px; border-radius: 30px; margin-bottom: 15px; }
-    
-    /* INPUT FIELDS IOS */
-    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stTextArea>div>textarea {
-        background: rgba(255, 255, 255, 0.05) !important;
-        border-radius: 15px !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        color: white !important;
-    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -125,18 +54,26 @@ def safe_int(val):
 def carica_dati(foglio):
     try:
         df = conn.read(worksheet=foglio, ttl=0).fillna("").astype(str)
-        df.columns = [c.strip() for c in df.columns]
-        if foglio == "Segnalazioni":
-            req = ["Targa", "KM_Segnalazione", "Data_Segnalazione", "Descrizione", "Urgenza", "Operatore", "Stato", "Foto", "Foto_Gomme", "Foto_Cruscotto", "Foto_KM", "Foto_Targa", "Foto_Libretto"]
-            for c in req:
-                if c not in df.columns: df[c] = ""
+        df.columns = [str(c).strip() for c in df.columns]
+        strutture = {
+            "Segnalazioni": ["Targa", "KM_Segnalazione", "Data_Segnalazione", "Descrizione", "Urgenza", "Operatore", "Stato", "Foto", "Foto_Gomme", "Foto_Cruscotto", "Foto_KM", "Foto_Targa", "Foto_Libretto"],
+            "Manutenzione": ["Targa", "KM_Attuali", "KM_Gomme", "KM_prossime Gomme", "KM_Tagliando", "KM_prossimo Tagliando", "Data", "User", "Altro"],
+            "Storico": ["Targa", "Data", "KM_Attuali", "KM_prossimo_Tagliando", "KM_prossime_Gomme", "User", "Altro"],
+            "AnagraficaDriver": ["Nome", "Cognome"],
+            "DanniDriver": ["Driver", "Targa", "Data", "Descrizione", "Stato", "Operatore", "Foto"],
+            "RubricaEmail": ["Nome", "Email"]
+        }
+        if foglio in strutture:
+            for col in strutture[foglio]:
+                if col not in df.columns: df[col] = ""
         return df
-    except: return pd.DataFrame()
+    except:
+        return pd.DataFrame()
 
 def process_image(uploaded_file):
     if uploaded_file is None: return ""
     img = Image.open(uploaded_file)
-    img.thumbnail((1280, 1280)) 
+    img.thumbnail((1280, 1280))
     buffered = io.BytesIO()
     img.save(buffered, format="JPEG", quality=85)
     return base64.b64encode(buffered.getvalue()).decode()
@@ -144,11 +81,9 @@ def process_image(uploaded_file):
 def genera_pdf_storico(row):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 16); pdf.cell(0, 15, "GOPRESSA SRL - REPORT INTERVENTO", ln=True, align='C')
-    pdf.ln(10); pdf.set_font("Arial", "", 12); pdf.cell(0, 8, f"Data: {row.get('Data','')}", ln=True)
-    pdf.cell(0, 8, f"Mezzo: {row.get('Targa','')} | Operatore: {row.get('User','')}", ln=True)
-    pdf.ln(10); pdf.set_font("Arial", "B", 12); pdf.cell(0, 8, f"KM REGISTRATI: {row.get('KM_Attuali','')} km", ln=True)
-    pdf.ln(10); pdf.set_font("Arial", "", 11); pdf.multi_cell(0, 8, f"Note: {row.get('Altro','')}")
+    pdf.set_font("Arial", "B", 16); pdf.cell(0, 15, "GOPRESSA SRL - REPORT", ln=True, align='C')
+    pdf.set_font("Arial", "", 12); pdf.cell(0, 8, f"Mezzo: {row.get('Targa','')} | KM: {row.get('KM_Attuali','')}", ln=True)
+    pdf.multi_cell(0, 8, f"Note: {row.get('Altro','')}")
     return pdf.output(dest='S').encode('latin-1')
 
 def invia_email_ufficiale(destinatario, targa, km, tipo_guasto, foto_list):
@@ -157,7 +92,21 @@ def invia_email_ufficiale(destinatario, targa, km, tipo_guasto, foto_list):
         msg = MIMEMultipart()
         msg['From'] = cfg["smtp_user"]; msg['To'] = destinatario
         msg['Subject'] = f"Richiesta Autorizzazione Intervento - {targa}"
-        corpo = f"Buongiorno,\n\nvi scrivo in riferimento al veicolo a noleggio targato {targa} - KM {km}.\nAvrei necessità di procedere con {tipo_guasto}.\n\nDisponiamo di una carrozzeria convenzionata con noi, la Aldo Dal Maso & C. Snc, sita in Via Badia 7, 36043 Camisano Vicentino (VI).\n\nCordiali saluti,\nGopressa SRL"
+        corpo = f"""Buongiorno,
+
+vi scrivo in riferimento al veicolo a noleggio targato {targa} - KM {km}.
+Avrei necessità di procedere con {tipo_guasto}.
+
+Disponiamo di una carrozzeria convenzionata con noi, la Aldo Dal Maso & C. Snc, sita in Via Badia 7, 36043 Camisano Vicentino (VI), vicino alla stazione Amazon, che sarebbe disponibile a eseguire i lavori in tempi brevi.
+
+Vi chiedo gentilmente se per Voi non ci sono problemi ad autorizzare questi interventi. Qualora ci confermaste la vostra approvazione, procederemmo immediatamente.
+
+In allegato le foto del veicolo.
+
+Resto in attesa di un Vostro gentile riscontro.
+
+Cordiali saluti,
+Gopressa SRL"""
         msg.attach(MIMEText(corpo, 'plain'))
         for label, b64_str in foto_list.items():
             if b64_str:
@@ -173,7 +122,7 @@ def invia_email_ufficiale(destinatario, targa, km, tipo_guasto, foto_list):
     except Exception as e:
         st.error(f"Errore mail: {e}"); return False
 
-# --- 4. LOGIN SYSTEM ---
+# --- 4. LOGIN ---
 UTENTI = {"ION PLUGARU": "1", "GURJIT SINGH": "2", "FILIPPO BERNARDI": "3"}
 if not st.session_state.user:
     st.markdown('<div class="header-container"><h1 class="main-title">GOPRESSA</h1><p style="color:gray;">BENVENUTO</p></div>', unsafe_allow_html=True)
@@ -183,10 +132,9 @@ if not st.session_state.user:
         if u_sel != "" and p_input == UTENTI[u_sel]: st.session_state.user = u_sel; st.rerun()
     st.stop()
 
-# --- 5. HEADER FISSO ---
+# --- 5. HEADER ---
 st.markdown(f'<div class="header-container"><h1 class="main-title">GOPRESSA</h1><p style="color:gray;">UNIT: {st.session_state.user}</p></div>', unsafe_allow_html=True)
 
-# CARICAMENTO DATI
 df_man = carica_dati("Manutenzione")
 df_drivers = carica_dati("AnagraficaDriver")
 df_rub = carica_dati("RubricaEmail")
@@ -205,7 +153,7 @@ if st.session_state.pagina == "home":
     with c2:
         if st.button("🚨 GUASTI"): st.session_state.pagina = "guasto"; st.rerun()
     with c3:
-        if st.button("💥 DANNI DRIVER"): st.session_state.pagina = "danno"; st.rerun()
+        if st.button("💥 DANNO DRIVER"): st.session_state.pagina = "danno"; st.rerun()
     with c4:
         if st.button("👑 ADMIN"): st.session_state.pagina = "admin"; st.rerun()
     if st.button("🚪 LOGOUT"): st.session_state.clear(); st.rerun()
@@ -241,12 +189,12 @@ elif st.session_state.pagina == "guasto":
         else: st.success(f"✅ {v} OK")
     if st.session_state.show_cam:
         if st.button("❌ CHIUDI"): st.session_state.show_cam=False; st.rerun()
-        fi = st.camera_input("SCATTA"); 
+        fi = st.camera_input("FOTO")
         if fi: st.session_state.gallery[st.session_state.foto_tipo] = process_image(fi); st.session_state.show_cam=False; st.rerun()
     if st.button("🚀 INVIA REPORT"):
-        sel = [k for k,v in {"Gomme Ant":p1,"Gomme Post":p2,"Freni":p3,"Tagliando":p4,"Spia":p5}.items() if v]
+        sel = [k for k,v in {"Cambio Gomme Ant":p1,"Cambio Gomme Post":p2,"Freni":p3,"Tagliando":p4,"Spia":p5}.items() if v]
         nuova_s = pd.DataFrame([{"Targa": t_guasto, "KM_Segnalazione": str(km_guasto), "Data_Segnalazione": datetime.now().strftime("%d/%m/%Y"), "Descrizione": ", ".join(sel)+" | "+note_extra, "Urgenza": "ALTA", "Operatore": st.session_state.user, "Stato": "APERTO", "Foto": st.session_state.gallery.get("Foto",""), "Foto_Gomme": st.session_state.gallery.get("Gomme",""), "Foto_Cruscotto": st.session_state.gallery.get("Cruscotto",""), "Foto_KM": st.session_state.gallery.get("Chilometri",""), "Foto_Targa": st.session_state.gallery.get("Targa",""), "Foto_Libretto": st.session_state.gallery.get("Libretto","")}])
-        conn.update(worksheet="Segnalazioni", data=pd.concat([carica_dati("Segnalazioni"), nuova_s], ignore_index=True)); st.session_state.gallery = {}; st.session_state.pagina = "home"; st.rerun()
+        conn.update(worksheet="Segnalazioni", data=pd.concat([carica_dati("Segnalazioni"), nuova_s], ignore_index=True)); st.session_state.pagina = "home"; st.rerun()
 
 elif st.session_state.pagina == "danno":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
@@ -257,19 +205,19 @@ elif st.session_state.pagina == "danno":
         if st.button("📷 FOTO"): st.session_state.show_cam=True; st.rerun()
     else:
         if st.button("❌ CHIUDI"): st.session_state.show_cam=False; st.rerun()
-        fi = st.camera_input("SCATTA"); 
+        fi = st.camera_input("SCATTA")
         if fi: st.session_state.foto_salvata = process_image(fi); st.session_state.show_cam=False; st.rerun()
-    if st.session_state.foto_salvata: st.image(base64.b64decode(st.session_state.foto_salvata), width=200)
     if st.button("🚀 INVIA"):
         nuovo_d = pd.DataFrame([{"Driver": d_sel, "Targa": t_sel, "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "Descrizione": desc, "Stato": "APERTO", "Operatore": st.session_state.user, "Foto": st.session_state.foto_salvata or ""}])
         conn.update(worksheet="DanniDriver", data=pd.concat([carica_dati("DanniDriver"), nuovo_d], ignore_index=True)); st.session_state.pagina = "home"; st.rerun()
 
 elif st.session_state.pagina == "admin":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
+    st.markdown("### ➕ AGGIUNTA DATI")
     c_a, c_b, c_c = st.columns(3)
     with c_a:
         with st.expander("🚛 VEICOLO"):
-            nv = st.text_input("Targa").upper(); 
+            nv = st.text_input("Targa").upper()
             if st.button("SALVA MEZZO"):
                 conn.update(worksheet="Manutenzione", data=pd.concat([df_man, pd.DataFrame([{"Targa":nv,"KM_Attuali":"0","KM_Gomme":"0","KM_prossime Gomme":"0","KM_Tagliando":"0","KM_prossimo Tagliando":"0","Data":"-","User":"-"}])], ignore_index=True)); st.rerun()
     with c_b:
@@ -284,30 +232,30 @@ elif st.session_state.pagina == "admin":
                 conn.update(worksheet="RubricaEmail", data=pd.concat([carica_dati("RubricaEmail"), pd.DataFrame([{"Nome":en, "Email":ee}])], ignore_index=True)); st.rerun()
 
     st.divider(); df_seg = carica_dati("Segnalazioni"); df_sto = carica_dati("Storico"); df_danni = carica_dati("DanniDriver")
-    # GUASTI
-    for targa in df_seg[df_seg['Stato'] == 'APERTO']['Targa'].unique():
-        with st.expander(f"🚛 PANNE: {targa}", expanded=True):
-            dg = df_seg[(df_seg['Targa'] == targa) & (df_seg['Stato'] == 'APERTO')].iloc[0]
-            st.write(f"Guasto: {dg['Descrizione']} | KM: {dg['KM_Segnalazione']}")
-            c = st.columns(6); fl = ["Gen", "Gomme", "Spia", "KM", "Targa", "Lib"]; fc = ["Foto", "Foto_Gomme", "Foto_Cruscotto", "Foto_KM", "Foto_Targa", "Foto_Libretto"]
-            for i, lab in enumerate(fl):
-                if dg.get(fc[i], ""): c[i].image(base64.b64decode(dg[fc[i]]), caption=lab)
-            sel_m = st.selectbox("Invia a:", lc, key=f"s_{targa}")
-            if st.button(f"📧 INVIA MAIL {targa}"):
-                fa = {fl[i]: dg.get(fc[i], "") for i in range(6)}
-                if invia_email_ufficiale(rd[sel_m], targa, dg['KM_Segnalazione'], dg['Descrizione'], fa): st.success("OK")
-            if st.button(f"✅ CHIUDI GUASTO {targa}"):
-                df_seg.loc[(df_seg['Targa'] == targa) & (df_seg['Stato'] == 'APERTO'), 'Operatore'] = st.session_state.user
-                df_seg.loc[df_seg['Targa'] == targa, 'Stato'] = 'CHIUSO'; conn.update(worksheet="Segnalazioni", data=df_seg); st.rerun()
-    # DANNI
-    for i, r in df_danni[df_danni['Stato'] == 'APERTO'].iterrows():
-        with st.expander(f"💥 DANNO: {r['Targa']}", expanded=True):
-            st.write(f"Driver: {r['Driver']} | {r['Descrizione']}")
-            if r['Foto']: st.image(base64.b64decode(r['Foto']), width=300)
-            if st.button(f"PRENDI IN CARICO {r['Targa']}##{i}"):
-                df_danni.at[i, 'Operatore'] = st.session_state.user; df_danni.at[i, 'Stato'] = 'CHIUSO'; conn.update(worksheet="DanniDriver", data=df_danni); st.rerun()
+    if 'Stato' in df_seg.columns:
+        for targa in df_seg[df_seg['Stato'] == 'APERTO']['Targa'].unique():
+            with st.expander(f"🚛 PANNE: {targa}", expanded=True):
+                dg = df_seg[(df_seg['Targa'] == targa) & (df_seg['Stato'] == 'APERTO')].iloc[0]
+                st.write(f"Guasto: {dg['Descrizione']} | KM: {dg['KM_Segnalazione']}")
+                c = st.columns(6); fl = ["Gen", "Gomme", "Spia", "KM", "Targa", "Lib"]; fc = ["Foto", "Foto_Gomme", "Foto_Cruscotto", "Foto_KM", "Foto_Targa", "Foto_Libretto"]
+                for i, lab in enumerate(fl):
+                    if dg.get(fc[i], ""): c[i].image(base64.b64decode(dg[fc[i]]), caption=lab)
+                sel_m = st.selectbox("Invia a:", lc, key=f"s_{targa}")
+                if st.button(f"📧 INVIA MAIL {targa}"):
+                    fa = {fl[i]: dg.get(fc[i], "") for i in range(6)}
+                    if invia_email_ufficiale(rd[sel_m], targa, dg['KM_Segnalazione'], dg['Descrizione'], fa): st.success("OK")
+                if st.button(f"✅ CHIUDI GUASTO {targa}"):
+                    df_seg.loc[(df_seg['Targa'] == targa) & (df_seg['Stato'] == 'APERTO'), 'Operatore'] = st.session_state.user
+                    df_seg.loc[df_seg['Targa'] == targa, 'Stato'] = 'CHIUSO'; conn.update(worksheet="Segnalazioni", data=df_seg); st.rerun()
+
+    if 'Stato' in df_danni.columns:
+        for i, r in df_danni[df_danni['Stato'] == 'APERTO'].iterrows():
+            with st.expander(f"💥 DANNO DRIVER: {r['Targa']}", expanded=True):
+                st.write(f"Driver: {r['Driver']} | {r['Descrizione']}")
+                if r['Foto']: st.image(base64.b64decode(r['Foto']), width=300)
+                if st.button(f"PRENDI IN CARICO {r['Targa']}##{i}"):
+                    df_danni.at[i, 'Operatore'] = st.session_state.user; df_danni.at[i, 'Stato'] = 'CHIUSO'; conn.update(worksheet="DanniDriver", data=df_danni); st.rerun()
 
     st.divider(); t_s = st.selectbox("STORICO PDF", lista_mezzi)
-    if not df_sto.empty and 'Targa' in df_sto.columns:
-        for i, r in df_sto[df_sto['Targa'] == t_s].sort_index(ascending=False).iterrows():
-            st.download_button(f"📄 Report {r['Data']}", data=genera_pdf_storico(r), file_name=f"Report.pdf", key=f"p_{i}")
+    for i, r in df_sto[df_sto['Targa'] == t_s].sort_index(ascending=False).iterrows():
+        st.download_button(f"📄 Report {r['Data']}", data=genera_pdf_storico(r), file_name=f"Report.pdf", key=f"p_{i}")
