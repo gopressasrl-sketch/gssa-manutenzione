@@ -13,7 +13,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 
 # --- 1. CONFIGURAZIONE SISTEMA ---
-st.set_page_config(page_title="GOPRESSA MISSION CONTROL", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="GOPRESSA PRO MAX", layout="wide", initial_sidebar_state="collapsed")
 
 # Inizializzazione variabili
 keys_to_init = ['pagina', 'show_cam', 'foto_tipo', 'is_admin', 'user', 'foto_salvata', 'gallery']
@@ -24,26 +24,98 @@ for key in keys_to_init:
         elif key == 'gallery': st.session_state[key] = {}
         else: st.session_state[key] = None
 
-# --- 2. LISTA TARGHE BACKUP ---
-TARGHE_BACKUP = sorted(["HB183CY","HB284CY","HB339CY","HB184CY","GG730AV","GG243ZM","GG677RR","GG927ZP","GG429ZP","GG790ZL","GG075ZP","GG206JK","GG834JH","GG477JF","GG736AV","GZ399JY","GZ401JY","HA717DG","GS597DF","GZ532JY","HA412FV","HA630DC","HA881MM","GZ249ZS","GZ023SB","HA668DG","HA942FV","HA953FV","HA957FV","HA539SS","GG392AW","GG733AV","GG303AW","GG161HW","GG850JH","GG828JH","GG831AV","GG318AW","GG484JF","GG408AW","GG341AW","GG207JK","GG558JH","GG564JH","GG181HW","GG473JF","GG208JK","GG829JH","GG192ZN","GG163HW","GJ873LS"])
-
-# --- 3. SUPER CSS PULIZIA TOTALE ---
+# --- 2. DESIGN IPHONE 17 PRO MAX (TITANIUM GLASS) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@300;500;700&display=swap');
-    [data-testid="stStatusWidget"], .stStatusWidget, div[id="stStatusWidget"], .stDeployButton, header, footer, #MainMenu, div[data-testid="stDecoration"], .viewerBadge_container__1QSob, .viewerBadge_link__1QSob, div[class^="viewerBadge"], div[data-testid="stToolbar"] { display: none !important; visibility: hidden !important; }
-    .stApp { background: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #0f172a 50%, #020617 100%); background-attachment: fixed; color: #f8fafc; font-family: 'Rajdhani', sans-serif; }
-    .header-container { text-align: center; padding: 30px; background: rgba(255, 255, 255, 0.02); border-radius: 40px; border: 1px solid rgba(0, 255, 255, 0.2); box-shadow: 0 0 30px rgba(0, 255, 255, 0.1); margin-bottom: 20px; }
-    .main-title { font-family: 'Orbitron', sans-serif; font-size: 3.5em !important; font-weight: 900; background: linear-gradient(to right, #00d2ff, #3a7bd5, #ff4b4b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 8px; }
-    .stButton>button { background: rgba(15, 23, 42, 0.6) !important; color: #00f2ff !important; border: 1px solid #00f2ff !important; border-radius: 15px !important; padding: 15px !important; font-size: 1.1em !important; font-weight: 700; width: 100%; transition: 0.3s; }
-    .status-card { padding: 20px; border-radius: 20px; text-align: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); }
-    .val-neon { font-family: 'Orbitron', sans-serif; font-size: 28px; text-shadow: 0 0 10px #00d2ff; color: #00d2ff; }
-    .guasto-card { background: rgba(0, 242, 255, 0.05); border: 1px solid #00f2ff; padding: 20px; border-radius: 20px; margin-bottom: 15px; }
-    .danno-card { background: rgba(255, 75, 75, 0.05); border: 1px solid #ff4b4b; padding: 20px; border-radius: 20px; margin-bottom: 15px; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+    
+    /* PULIZIA TOTALE STREAMLIT */
+    [data-testid="stStatusWidget"], .stStatusWidget, div[id="stStatusWidget"], .stDeployButton, 
+    header, footer, #MainMenu, div[data-testid="stDecoration"], .viewerBadge_container__1QSob, 
+    .viewerBadge_link__1QSob, div[class^="viewerBadge"], div[data-testid="stToolbar"] { 
+        display: none !important; visibility: hidden !important; 
+    }
+
+    /* SFONDO OLED BLACK & TITANIUM */
+    .stApp {
+        background: linear-gradient(180deg, #000000 0%, #1c1c1e 100%);
+        color: #ffffff;
+        font-family: 'Inter', -apple-system, sans-serif;
+    }
+
+    /* CONTENITORE PRINCIPALE TIPO IPHONE */
+    .header-container {
+        text-align: center;
+        padding: 40px 20px;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        border-radius: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin: 10px auto 30px auto;
+        max-width: 800px;
+    }
+
+    /* TITOLO PREMIUM */
+    .main-title {
+        font-size: 3.5em !important;
+        font-weight: 800;
+        letter-spacing: -2px;
+        background: linear-gradient(180deg, #ffffff 0%, #a2a2a2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+    }
+
+    /* CARD STILE IOS */
+    .stButton>button {
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 25px !important;
+        padding: 20px !important;
+        font-size: 1.1em !important;
+        font-weight: 600 !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+    }
+
+    .stButton>button:hover {
+        background: #ffffff !important;
+        color: #000000 !important;
+        transform: scale(0.98);
+    }
+
+    /* BOX SCADENZE IPHONE */
+    .status-card {
+        padding: 25px;
+        border-radius: 30px;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+    }
+    
+    .val-neon {
+        font-size: 32px;
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    /* GUASTI & DANNI CARD */
+    .guasto-card { background: rgba(10, 132, 255, 0.15); border: 1px solid #0a84ff; padding: 20px; border-radius: 30px; margin-bottom: 15px; }
+    .danno-card { background: rgba(255, 69, 58, 0.15); border: 1px solid #ff453a; padding: 20px; border-radius: 30px; margin-bottom: 15px; }
+    
+    /* INPUT FIELDS IOS */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stTextArea>div>textarea {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 15px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. FUNZIONI DATABASE ---
+# --- 3. FUNZIONI CORE ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def safe_int(val):
@@ -85,7 +157,7 @@ def invia_email_ufficiale(destinatario, targa, km, tipo_guasto, foto_list):
         msg = MIMEMultipart()
         msg['From'] = cfg["smtp_user"]; msg['To'] = destinatario
         msg['Subject'] = f"Richiesta Autorizzazione Intervento - {targa}"
-        corpo = f"Buongiorno,\n\nvi scrivo in riferimento al veicolo a noleggio targato {targa} - KM {km}.\nAvrei necessità di procedere con {tipo_guasto}.\n\nDisponiamo di una carrozzeria convenzionata con noi, la Aldo Dal Maso & C. Snc, sita in Via Badia 7, 36043 Camisano Vicentino (VI), vicino alla stazione Amazon.\n\nVi chiedo gentilmente l'autorizzazione.\n\nCordiali saluti,\nGopressa SRL"
+        corpo = f"Buongiorno,\n\nvi scrivo in riferimento al veicolo a noleggio targato {targa} - KM {km}.\nAvrei necessità di procedere con {tipo_guasto}.\n\nDisponiamo di una carrozzeria convenzionata con noi, la Aldo Dal Maso & C. Snc, sita in Via Badia 7, 36043 Camisano Vicentino (VI).\n\nCordiali saluti,\nGopressa SRL"
         msg.attach(MIMEText(corpo, 'plain'))
         for label, b64_str in foto_list.items():
             if b64_str:
@@ -101,49 +173,53 @@ def invia_email_ufficiale(destinatario, targa, km, tipo_guasto, foto_list):
     except Exception as e:
         st.error(f"Errore mail: {e}"); return False
 
-# --- 5. LOGIN ---
+# --- 4. LOGIN SYSTEM ---
 UTENTI = {"ION PLUGARU": "1", "GURJIT SINGH": "2", "FILIPPO BERNARDI": "3"}
 if not st.session_state.user:
-    st.markdown('<div class="header-container"><h1 class="main-title">GOPRESSA</h1></div>', unsafe_allow_html=True)
+    st.markdown('<div class="header-container"><h1 class="main-title">GOPRESSA</h1><p style="color:gray;">BENVENUTO</p></div>', unsafe_allow_html=True)
     u_sel = st.selectbox("OPERATORE", [""] + list(UTENTI.keys()))
     p_input = st.text_input("PASSWORD", type="password")
-    if st.button("ACCEDI"):
+    if st.button("SBLOCCA PORTALE"):
         if u_sel != "" and p_input == UTENTI[u_sel]: st.session_state.user = u_sel; st.rerun()
     st.stop()
 
-# --- 6. HEADER E DATI ---
-st.markdown(f'<div class="header-container"><h1 class="main-title">GOPRESSA</h1><p>OPERATORE: {st.session_state.user}</p></div>', unsafe_allow_html=True)
+# --- 5. HEADER FISSO ---
+st.markdown(f'<div class="header-container"><h1 class="main-title">GOPRESSA</h1><p style="color:gray;">UNIT: {st.session_state.user}</p></div>', unsafe_allow_html=True)
+
+# CARICAMENTO DATI
 df_man = carica_dati("Manutenzione")
-lista_mezzi = sorted(df_man['Targa'].unique().tolist()) if not df_man.empty else TARGHE_BACKUP
+df_drivers = carica_dati("AnagraficaDriver")
 df_rub = carica_dati("RubricaEmail")
+TARGHE_BACKUP = sorted(["HB183CY","HB284CY","HB339CY","HB184CY","GG730AV","GG243ZM","GG677RR","GG927ZP","GG429ZP","GG790ZL","GG075ZP","GG206JK","GG834JH","GG477JF","GG736AV","GZ399JY","GZ401JY","HA717DG","GS597DF","GZ532JY","HA412FV","HA630DC","HA881MM","GZ249ZS","GZ023SB","HA668DG","HA942FV","HA953FV","HA957FV","HA539SS","GG392AW","GG733AV","GG303AW","GG161HW","GG850JH","GG828JH","GG831AV","GG318AW","GG484JF","GG408AW","GG341AW","GG207JK","GG558JH","GG564JH","GG181HW","GG473JF","GG208JK","GG829JH","GG192ZN","GG163HW","GJ873LS"])
+lista_mezzi = sorted(df_man['Targa'].unique().tolist()) if not df_man.empty else TARGHE_BACKUP
 rd = {"SIXT VERONA": "dt48721@sixt.com", "SIXT MESTRE": "dt48302@sixt.com"}
 for _,r in df_rub.iterrows(): rd[r['Nome']] = r['Email']
 lc = sorted(list(rd.keys()))
 
-# --- 7. NAVIGAZIONE ---
+# --- 6. NAVIGAZIONE ---
 if st.session_state.pagina == "home":
     st.session_state.gallery = {}; st.session_state.foto_salvata = None; st.session_state.show_cam = False
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         if st.button("🛠️ MANUTENZIONE"): st.session_state.pagina = "manutenzione"; st.rerun()
     with c2:
-        if st.button("🚨 SEGNALA GUASTO"): st.session_state.pagina = "guasto"; st.rerun()
+        if st.button("🚨 GUASTI"): st.session_state.pagina = "guasto"; st.rerun()
     with c3:
-        if st.button("💥 DANNO DRIVER"): st.session_state.pagina = "danno"; st.rerun()
+        if st.button("💥 DANNI DRIVER"): st.session_state.pagina = "danno"; st.rerun()
     with c4:
         if st.button("👑 ADMIN"): st.session_state.pagina = "admin"; st.rerun()
     if st.button("🚪 LOGOUT"): st.session_state.clear(); st.rerun()
 
 elif st.session_state.pagina == "manutenzione":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
-    t_sel = st.selectbox("🚛 MEZZO", lista_mezzi)
+    t_sel = st.selectbox("🚛 UNITÀ", lista_mezzi)
     idx_l = df_man.index[df_man['Targa'] == t_sel].tolist()
     idx = idx_l[0] if idx_l else 0
     km_att = st.number_input("📟 KM", value=safe_int(df_man.at[idx, 'KM_Attuali']) if idx_l else 0)
     c1, c2 = st.columns(2)
     c1.markdown(f"<div class='status-card'><small>TAGLIANDO A</small><br><div class='val-neon'>{km_att + 30000}</div></div>", unsafe_allow_html=True)
     c2.markdown(f"<div class='status-card'><small>GOMME A</small><br><div class='val-neon'>{km_att + 40000}</div></div>", unsafe_allow_html=True)
-    ch_t = st.checkbox("⚙️ Tagliando fatto"); ch_g = st.checkbox("🛞 Gomme cambiate")
+    ch_t = st.checkbox("⚙️ Tagliando fatto"); ch_g = st.checkbox("🛞 Gomme cambiate"); altro = st.text_area("Note:")
     if st.button("💾 SALVA"):
         if idx_l:
             df_man.at[idx, 'KM_Attuali'] = str(km_att); df_man.at[idx, 'Data'] = datetime.now().strftime("%d/%m/%Y")
@@ -155,8 +231,8 @@ elif st.session_state.pagina == "manutenzione":
 
 elif st.session_state.pagina == "guasto":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
-    t_guasto = st.selectbox("UNITÀ", lista_mezzi); km_guasto = st.number_input("📟 KM ATTUALI:", value=0)
-    p1=st.checkbox("Cambio Gomme Ant"); p2=st.checkbox("Cambio Gomme Post"); p3=st.checkbox("Pastiglie"); p4=st.checkbox("Tagliando"); p5=st.checkbox("Spia motore")
+    t_guasto = st.selectbox("🚛 UNITÀ", lista_mezzi); km_guasto = st.number_input("📟 KM ATTUALI:", value=0)
+    p1=st.checkbox("Cambio Gomme Ant"); p2=st.checkbox("Cambio Gomme Post"); p3=st.checkbox("Pastiglie Freni"); p4=st.checkbox("Tagliando"); p5=st.checkbox("Spia motore")
     note_extra = st.text_area("🗒️ ALTRE NOTE:")
     f_keys = {"Foto": "GEN", "Gomme": "GOMME 2", "Cruscotto": "SPIA", "Chilometri": "KM", "Targa": "TARGA", "Libretto": "LIBRETTO"}
     for k, v in f_keys.items():
@@ -200,7 +276,7 @@ elif st.session_state.pagina == "admin":
         with st.expander("👤 DRIVER"):
             nn = st.text_input("Nome").upper(); nc = st.text_input("Cognome").upper()
             if st.button("SALVA DRIVER"):
-                df_dr_v = carica_dati("AnagraficaDriver"); conn.update(worksheet="AnagraficaDriver", data=pd.concat([df_dr_v, pd.DataFrame([{"Nome":nn, "Cognome":nc}])], ignore_index=True)); st.rerun()
+                conn.update(worksheet="AnagraficaDriver", data=pd.concat([carica_dati("AnagraficaDriver"), pd.DataFrame([{"Nome":nn, "Cognome":nc}])], ignore_index=True)); st.rerun()
     with c_c:
         with st.expander("📧 EMAIL"):
             en = st.text_input("Contatto").upper(); ee = st.text_input("Email")
@@ -208,8 +284,9 @@ elif st.session_state.pagina == "admin":
                 conn.update(worksheet="RubricaEmail", data=pd.concat([carica_dati("RubricaEmail"), pd.DataFrame([{"Nome":en, "Email":ee}])], ignore_index=True)); st.rerun()
 
     st.divider(); df_seg = carica_dati("Segnalazioni"); df_sto = carica_dati("Storico"); df_danni = carica_dati("DanniDriver")
+    # GUASTI
     for targa in df_seg[df_seg['Stato'] == 'APERTO']['Targa'].unique():
-        with st.expander(f"🚛 VEICOLO: {targa}", expanded=True):
+        with st.expander(f"🚛 PANNE: {targa}", expanded=True):
             dg = df_seg[(df_seg['Targa'] == targa) & (df_seg['Stato'] == 'APERTO')].iloc[0]
             st.write(f"Guasto: {dg['Descrizione']} | KM: {dg['KM_Segnalazione']}")
             c = st.columns(6); fl = ["Gen", "Gomme", "Spia", "KM", "Targa", "Lib"]; fc = ["Foto", "Foto_Gomme", "Foto_Cruscotto", "Foto_KM", "Foto_Targa", "Foto_Libretto"]
@@ -222,7 +299,7 @@ elif st.session_state.pagina == "admin":
             if st.button(f"✅ CHIUDI GUASTO {targa}"):
                 df_seg.loc[(df_seg['Targa'] == targa) & (df_seg['Stato'] == 'APERTO'), 'Operatore'] = st.session_state.user
                 df_seg.loc[df_seg['Targa'] == targa, 'Stato'] = 'CHIUSO'; conn.update(worksheet="Segnalazioni", data=df_seg); st.rerun()
-
+    # DANNI
     for i, r in df_danni[df_danni['Stato'] == 'APERTO'].iterrows():
         with st.expander(f"💥 DANNO: {r['Targa']}", expanded=True):
             st.write(f"Driver: {r['Driver']} | {r['Descrizione']}")
