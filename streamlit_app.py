@@ -16,23 +16,27 @@ if 'show_cam' not in st.session_state: st.session_state.show_cam = False
 if 'foto_salvata' not in st.session_state: st.session_state.foto_salvata = None
 if 'is_admin' not in st.session_state: st.session_state.is_admin = True 
 
-# --- STILE CSS EXTREME (CANCELLA TUTTE LE ICONE STREAMLIT) ---
+# --- SUPER CSS PER CANCELLARE TUTTO IL CARICAMENTO (RUNNING...) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@300;500;700&display=swap');
     
-    /* 1. CANCELLA DEFINITIVAMENTE CORONA, CERCHIETTO BLU E BARRE STRANE */
-    #MainMenu, header, footer, [data-testid="stStatusWidget"], .stDeployButton {
+    /* 1. NASCONDE TOTALMENTE LA BARRA "RUNNING..." E IL CERCHIETTO */
+    [data-testid="stStatusWidget"], .stStatusWidget, div[id="stStatusWidget"] {
         display: none !important;
         visibility: hidden !important;
     }
     
-    /* Badge "Manage App" Streamlit Cloud */
+    /* Rimuove lo spinner e la corona di Streamlit Cloud */
+    #MainMenu, header, footer, .stDeployButton {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
     .viewerBadge_container__1QSob, .viewerBadge_link__1QSob, div[class^="viewerBadge"] {
         display: none !important;
     }
 
-    /* Rimuove toolbar in alto a destra */
     div[data-testid="stToolbar"] { display: none !important; }
 
     /* 2. DESIGN DEEP SPACE */
@@ -177,7 +181,6 @@ elif st.session_state.pagina == "manutenzione":
 # --- SEGNALA DANNO ---
 elif st.session_state.pagina == "danno":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
-    st.markdown("<h2>💥 SEGNALA DANNO DRIVER</h2>", unsafe_allow_html=True)
     d_sel = st.selectbox("DRIVER", lista_drivers)
     t_sel = st.selectbox("VEICOLO", lista_mezzi)
     desc = st.text_area("DESCRIZIONE DANNO")
@@ -188,7 +191,6 @@ elif st.session_state.pagina == "danno":
         if cam_foto:
             st.session_state.foto_salvata = process_image(cam_foto)
             st.session_state.show_cam = False; st.rerun()
-        if st.button("CHIUDI"): st.session_state.show_cam = False; st.rerun()
     if st.session_state.foto_salvata:
         st.image(base64.b64decode(st.session_state.foto_salvata), width=200)
     if st.button("🚀 INVIA REPORT"):
@@ -197,13 +199,12 @@ elif st.session_state.pagina == "danno":
         conn.update(worksheet="DanniDriver", data=pd.concat([df_d_v, nuovo_d], ignore_index=True))
         reset_camera(); st.session_state.pagina = "home"; st.rerun()
 
-# --- SEGNALA GUASTO (CON OPZIONI RICHIESTE) ---
+# --- SEGNALA GUASTO (CON OPZIONI SPECIFICHE) ---
 elif st.session_state.pagina == "guasto":
     if st.button("⬅️ MENU"): st.session_state.pagina = "home"; st.rerun()
     st.markdown("<h2>🚨 ANOMALIA MEZZO</h2>", unsafe_allow_html=True)
     t_guasto = st.selectbox("UNITÀ", lista_mezzi)
     
-    # OPZIONI RICHIESTE
     st.write("Seleziona i problemi riscontrati:")
     p1 = st.checkbox("Cambio Gomme Anteriore")
     p2 = st.checkbox("Cambio gomme Posteriore")
@@ -213,7 +214,7 @@ elif st.session_state.pagina == "guasto":
     
     desc_extra = st.text_area("Altre note o dettagli:")
     
-    # Unione dei problemi selezionati
+    # Costruzione stringa problemi
     problemi = []
     if p1: problemi.append("Cambio Gomme Anteriore")
     if p2: problemi.append("Cambio gomme Posteriore")
@@ -222,8 +223,7 @@ elif st.session_state.pagina == "guasto":
     if p5: problemi.append("Spia motore")
     
     desc_finale = ", ".join(problemi)
-    if desc_extra:
-        desc_finale += " | Note: " + desc_extra
+    if desc_extra: desc_finale += " | Note: " + desc_extra
 
     if not st.session_state.show_cam:
         if st.button("📷 APRI FOTOCAMERA"): st.session_state.show_cam = True; st.rerun()
@@ -232,7 +232,6 @@ elif st.session_state.pagina == "guasto":
         if cam_foto:
             st.session_state.foto_salvata = process_image(cam_foto)
             st.session_state.show_cam = False; st.rerun()
-    
     if st.session_state.foto_salvata:
         st.image(base64.b64decode(st.session_state.foto_salvata), width=200)
         
