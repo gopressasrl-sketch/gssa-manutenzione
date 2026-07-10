@@ -150,7 +150,7 @@ def invia_email_ufficiale(destinatario, targa, km, tipo_guasto, foto_list):
     except: return False
 
 # --- 4. LOGIN ---
-UTENTI = {"ION PLUGARU": "1", "GURJIT SINGH": "2", "FILIPPO BERNARDINI": "3"}
+UTENTI = {"ION PLUGARU": "1", "GURJIT SINGH": "2", "FILIPPO BERNARDI": "3"}
 if not st.session_state.user:
     st.markdown(f'<div class="dynamic-island"><h1 class="island-title">GOPRESSA</h1><p style="color:#d4af37;">GOLD COMMAND</p></div>', unsafe_allow_html=True)
     u_sel = st.selectbox("OPERATORE", [""] + list(UTENTI.keys()))
