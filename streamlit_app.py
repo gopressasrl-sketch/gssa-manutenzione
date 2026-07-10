@@ -56,7 +56,7 @@ st.markdown(f"""
     .app-label {{ color: white; font-size: 11px; margin-top: 6px; margin-bottom: 25px; font-weight: 400; line-height: 1.1; }}
     .ios-card {{ background: rgba(28, 28, 30, 0.98); border-radius: 35px; padding: 25px; color: white; margin: 0 auto; max-width: 700px; }}
     .status-card-inner {{ text-align: center; background: #000; border-radius: 20px; padding: 15px; margin-bottom: 10px; border: 1px solid #2c2c2e; }}
-    .status-val {{ font-size: 26px; font-weight: 700; color: #0a84ff; }}
+    .status-val {{ font-size: 24px; font-weight: 700; color: #0a84ff; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -83,9 +83,13 @@ def carica_dati(foglio):
     except: return pd.DataFrame()
 
 def process_image(uploaded_file):
+    """QUALITÀ OTTIMIZZATA PER STABILITÀ (600px)"""
     if uploaded_file is None: return ""
-    img = Image.open(uploaded_file); img.thumbnail((1024, 1024))
-    buf = io.BytesIO(); img.save(buf, format="JPEG", quality=75, optimize=True); return base64.b64encode(buf.getvalue()).decode()
+    img = Image.open(uploaded_file)
+    img.thumbnail((600, 600)) 
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=50, optimize=True)
+    return base64.b64encode(buf.getvalue()).decode()
 
 def genera_pdf_storico(row):
     pdf = FPDF(); pdf.add_page(); pdf.set_font("Arial", "B", 16); pdf.cell(0, 15, "GOPRESSA SRL - REPORT", ln=True, align='C')
@@ -129,16 +133,16 @@ if st.session_state.pagina == "home":
     st.session_state.gallery = {}; st.session_state.sub_guasto = None
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        if st.button("🛠️", key="i1"): st.session_state.pagina = "manutenzione"; st.rerun()
+        if st.button("🛠️", key="h1"): st.session_state.pagina = "manutenzione"; st.rerun()
         st.markdown('<p class="app-label">Manutenzione</p>', unsafe_allow_html=True)
     with c2:
-        if st.button("🚨", key="i2"): st.session_state.pagina = "guasto"; st.rerun()
+        if st.button("🚨", key="h2"): st.session_state.pagina = "guasto"; st.rerun()
         st.markdown('<p class="app-label">Guasti</p>', unsafe_allow_html=True)
     with c3:
-        if st.button("💥", key="i3"): st.session_state.pagina = "danno"; st.rerun()
-        st.markdown('<p class="app-label">Sinistri</p>', unsafe_allow_html=True)
+        if st.button("💥", key="h3"): st.session_state.pagina = "danno"; st.rerun()
+        st.markdown('<p class="app-label">Danni Driver</p>', unsafe_allow_html=True)
     with c4:
-        if st.button("📊", key="i4"): st.session_state.pagina = "status"; st.rerun()
+        if st.button("📊", key="h4"): st.session_state.pagina = "status"; st.rerun()
         st.markdown('<p class="app-label">Flotta</p>', unsafe_allow_html=True)
     st.write("<br><br>", unsafe_allow_html=True)
     d1, d2 = st.columns(2)
@@ -149,7 +153,7 @@ if st.session_state.pagina == "home":
         if st.button("🚪", key="exit"): st.session_state.clear(); st.rerun()
         st.markdown('<p class="app-label">Logout</p>', unsafe_allow_html=True)
 
-# --- 7. GUASTO (SOTTO-MENU SPECIFICO) ---
+# --- 7. GUASTO ---
 elif st.session_state.pagina == "guasto":
     st.markdown("<div class='ios-card'>", unsafe_allow_html=True)
     if st.button("⬅️ Indietro"): 
@@ -158,7 +162,7 @@ elif st.session_state.pagina == "guasto":
         st.rerun()
 
     if not st.session_state.sub_guasto:
-        st.markdown("### 🚨 Tipo di Problema")
+        st.markdown("### 🚨 Seleziona Problema")
         if st.button("🦷 PASTIGLIE FRENI"): st.session_state.sub_guasto = "Pastiglie Freni"; st.rerun()
         if st.button("🛞 GOMME DA CAMBIARE"): st.session_state.sub_guasto = "Gomme"; st.rerun()
         if st.button("💡 SPIA MOTORE"): st.session_state.sub_guasto = "Spia Motore"; st.rerun()
@@ -166,22 +170,19 @@ elif st.session_state.pagina == "guasto":
         if st.button("❓ ALTRI GUASTI"): st.session_state.sub_guasto = "Altro"; st.rerun()
     else:
         tipo = st.session_state.sub_guasto
-        st.markdown(f"### Report: {tipo}")
         t_g = st.selectbox("🚛 MEZZO", lista_mezzi)
         km_g = st.number_input("📟 KM ATTUALI:", value=0)
-        note = st.text_area("🗒️ NOTE:") if tipo == "Altro" else ""
+        note = st.text_area("🗒️ ALTRE NOTE:") if tipo == "Altro" else ""
 
-        # CONFIGURAZIONE FOTO RICHIESTE
         config = {
-            "Pastiglie Freni": {"Targa":"TARGA", "KM":"FOTO KM", "Spia":"FOTO SPIA", "Libretto":"LIBRETTO"},
-            "Gomme": {"Gomme1":"GOMMA 1", "Gomme2":"GOMMA 2", "Targa":"TARGA", "Libretto":"LIBRETTO", "KM":"FOTO KM"},
-            "Spia Motore": {"Spia":"FOTO SPIA", "KM":"FOTO KM", "Libretto":"LIBRETTO", "Targa":"TARGA"},
-            "Tagliando": {"Targa":"TARGA", "KM":"FOTO KM", "Spia":"FOTO SPIA", "Libretto":"LIBRETTO"},
-            "Altro": {"Targa":"TARGA", "KM":"FOTO KM", "Extra1":"FOTO DANNO 1", "Extra2":"FOTO DANNO 2"}
+            "Pastiglie Freni": {"Targa":"TARGA", "KM":"KM", "Spia":"SPIA", "Libretto":"LIBRETTO"},
+            "Gomme": {"Gomme1":"GOMMA 1", "Gomme2":"GOMMA 2", "Targa":"TARGA", "Libretto":"LIBRETTO", "KM":"KM"},
+            "Spia Motore": {"Spia":"SPIA", "KM":"KM", "Libretto":"LIBRETTO", "Targa":"TARGA"},
+            "Tagliando": {"Targa":"TARGA", "KM":"KM", "Spia":"SPIA", "Libretto":"LIBRETTO"},
+            "Altro": {"Targa":"TARGA", "KM":"KM", "Extra1":"FOTO 1", "Extra2":"FOTO 2"}
         }
         
-        foto_servite = config[tipo]
-        for k, v in foto_servite.items():
+        for k, v in config[tipo].items():
             if k not in st.session_state.gallery:
                 if st.button(f"📷 {v}"): st.session_state.show_cam = True; st.session_state.foto_tipo = k; st.rerun()
             else: st.success(f"✅ {v} OK")
@@ -195,29 +196,62 @@ elif st.session_state.pagina == "guasto":
             gal = st.session_state.gallery
             nuova = pd.DataFrame([{"Targa": t_g, "KM_Segnalazione": str(km_g), "Data_Segnalazione": datetime.now().strftime("%d/%m/%Y"), 
                                    "Descrizione": f"{tipo} {note}", "Urgenza": "ALTA", "Operatore": st.session_state.user, "Stato": "APERTO",
-                                   "Foto_Gomme": gal.get("Gomme1",""), "Foto_Cruscotto": gal.get("Spia",""), 
-                                   "Foto_KM": gal.get("KM",""), "Foto_Targa": gal.get("Targa",""), "Foto_Libretto": gal.get("Libretto","")}])
+                                   "Foto": gal.get("Foto",""), "Foto_Gomme": gal.get("Gomme1","") or gal.get("Extra1",""), 
+                                   "Foto_Cruscotto": gal.get("Spia",""), "Foto_KM": gal.get("KM",""), "Foto_Targa": gal.get("Targa",""), "Foto_Libretto": gal.get("Libretto","")}])
             conn.update(worksheet="Segnalazioni", data=pd.concat([carica_dati("Segnalazioni"), nuova], ignore_index=True))
             st.session_state.pagina="home"; st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
-# --- PAGINE ADMIN, MANUTENZIONE, DANNO (INVARIATE) ---
+# --- ALTRE PAGINE (MANUTENZIONE, DANNO, ADMIN) ---
 elif st.session_state.pagina == "manutenzione":
     st.markdown("<div class='ios-card'>", unsafe_allow_html=True)
     if st.button("⬅️ Chiudi"): st.session_state.pagina = "home"; st.rerun()
     t_sel = st.selectbox("🚛 UNITÀ", lista_mezzi)
     idx = df_man[df_man['Targa'] == t_sel].index[0] if not df_man[df_man['Targa'] == t_sel].empty else 0
     km_att = st.number_input("📟 KM", value=safe_int(df_man.at[idx, 'KM_Attuali']))
+    c1, c2 = st.columns(2)
+    with c1: st.markdown(f"<div class='status-card-inner'><small>TAGLIANDO A</small><br><div class='status-val'>{km_att + 30000}</div></div>", unsafe_allow_html=True)
+    with c2: st.markdown(f"<div class='status-card-inner'><small>GOMME A</small><br><div class='status-val'>{km_att + 40000}</div></div>", unsafe_allow_html=True)
     if st.button("💾 SALVA"):
         df_man.at[idx, 'KM_Attuali'] = str(km_att); df_man.at[idx, 'Data'] = datetime.now().strftime("%d/%m/%Y")
         conn.update(worksheet="Manutenzione", data=df_man); st.session_state.pagina = "home"; st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
+elif st.session_state.pagina == "danno":
+    st.markdown("<div class='ios-card'>", unsafe_allow_html=True)
+    if st.button("⬅️ Chiudi"): st.session_state.pagina = "home"; st.rerun()
+    df_dr = carica_dati("AnagraficaDriver")
+    l_d = (df_dr['Nome'] + " " + df_dr['Cognome']).tolist() if not df_dr.empty else ["NESSUN DRIVER"]
+    d_s = st.selectbox("DRIVER", l_d); t_s = st.selectbox("VEICOLO", lista_mezzi); ds = st.text_area("DANNO")
+    if not st.session_state.show_cam:
+        if st.button("📷 FOTO DANNO"): st.session_state.show_cam=True; st.rerun()
+    else:
+        if st.button("❌ CHIUDI"): st.session_state.show_cam=False; st.rerun()
+        fi = st.camera_input("SCATTA")
+        if fi: st.session_state.foto_salvata = process_image(fi); st.session_state.show_cam=False; st.rerun()
+    if st.session_state.foto_salvata: st.image(base64.b64decode(st.session_state.foto_salvata), width=200)
+    if st.button("🚀 INVIA"):
+        conn.update(worksheet="DanniDriver", data=pd.concat([carica_dati("DanniDriver"), pd.DataFrame([{"Driver": d_s, "Targa": t_s, "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "Descrizione": ds, "Stato": "APERTO", "Operatore": st.session_state.user, "Foto": st.session_state.foto_salvata or ""}])], ignore_index=True)); st.session_state.pagina = "home"; st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
+
 elif st.session_state.pagina == "admin":
     st.markdown("<div class='ios-card'>", unsafe_allow_html=True)
     if st.button("⬅️ Chiudi"): st.session_state.pagina = "home"; st.rerun()
-    # Logica Admin (Targhe, Driver, Email)
-    df_seg = carica_dati("Segnalazioni")
+    c_a, c_b, c_c = st.columns(3)
+    with c_a:
+        with st.expander("🚛 VEICOLO"):
+            nv = st.text_input("Targa").upper()
+            if st.button("SALVA V", key="v"): conn.update(worksheet="Manutenzione", data=pd.concat([df_man, pd.DataFrame([{"Targa":nv,"KM_Attuali":"0"}])], ignore_index=True)); st.rerun()
+    with c_b:
+        with st.expander("👤 DRIVER"):
+            nn = st.text_input("Nome").upper(); nc = st.text_input("Cognome").upper()
+            if st.button("SALVA D", key="d"): conn.update(worksheet="AnagraficaDriver", data=pd.concat([carica_dati("AnagraficaDriver"), pd.DataFrame([{"Nome":nn, "Cognome":nc}])], ignore_index=True)); st.rerun()
+    with c_c:
+        with st.expander("📧 EMAIL"):
+            en = st.text_input("Contatto").upper(); ee = st.text_input("Email")
+            if st.button("SALVA E", key="e"): conn.update(worksheet="RubricaEmail", data=pd.concat([carica_dati("RubricaEmail"), pd.DataFrame([{"Nome":en, "Email":ee}])], ignore_index=True)); st.rerun()
+    
+    st.divider(); df_seg = carica_dati("Segnalazioni"); df_sto = carica_dati("Storico")
     for targa in df_seg[df_seg['Stato'] == 'APERTO']['Targa'].unique():
         with st.expander(f"🚛 {targa}", expanded=True):
             dg = df_seg[(df_seg['Targa'] == targa) & (df_seg['Stato'] == 'APERTO')].iloc[0]
@@ -226,4 +260,7 @@ elif st.session_state.pagina == "admin":
             if st.button(f"✅ CHIUDI GUASTO {targa}"):
                 df_seg.loc[(df_seg['Targa'] == targa) & (df_seg['Stato'] == 'APERTO'), 'Operatore'] = st.session_state.user
                 df_seg.loc[df_seg['Stato'] == 'APERTO', 'Stato'] = 'CHIUSO'; conn.update(worksheet="Segnalazioni", data=df_seg); st.rerun()
+    st.divider(); df_sto_v = carica_dati("Storico"); ts = st.selectbox("ARCHIVIO PDF", lista_mezzi)
+    for i, r in df_sto_v[df_sto_v['Targa'] == ts].sort_index(ascending=False).iterrows():
+        st.download_button(f"📄 Report {r['Data']}", data=genera_pdf_storico(r), file_name=f"Report.pdf", key=f"p_{i}")
     st.markdown("</div>", unsafe_allow_html=True)
